@@ -1,0 +1,54 @@
+﻿@inject Clipboard.IClipboardService ClipboardService
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">ResolutionOnline</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Start
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="resolver">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Resolver
+            </NavLink>
+        </div>
+        @*<div class="nav-item px-3">
+            <button @onclick="Copy" class="btn btn-primary">Copy Proof to Clipboard</button>
+        </div>*@
+        @*<div class="nav-item px-3">
+            <button @onclick="OnClick" class="btn btn-primary">Change Value</button>
+        </div>*@
+    </nav>
+</div>
+
+@code {
+    private bool _collapseNavMenu = true;
+
+    private string? NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        _collapseNavMenu = !_collapseNavMenu;
+    }
+
+    [Parameter]
+    public string TextToCopy { get; set; } = "Not yet";
+    private async Task Copy()
+    {
+        await ClipboardService.CopyToClipboard(TextToCopy);
+    }
+
+    private void OnClick()
+    {
+        TextToCopy = "Here";
+    }
+}

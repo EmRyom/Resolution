@@ -1,0 +1,350 @@
+﻿@page "/resolver"
+@using ResolutionOnline.Data
+@using Resolution
+@using System.Text.RegularExpressions
+@inject NavigationManager NavigationManager
+@inject ResolutionFlowContainer ResolutionFlowContainer
+@using BlazorAnimate
+@inject Clipboard.IClipboardService ClipboardService
+
+
+<h3>Resolver</h3>
+
+@if (_resolutionFlow != null)
+{
+    <div style="margin: auto; width:100%; text-align:center;">
+        @if (_choicePrompt)
+        {
+            if (_atom1 != null && _atom2 != null)
+            {
+                ResolveEndWithAtoms();
+            }
+
+            <div class="overlay" >
+                <div class="selector">
+                @if (_selection != null )
+                    {
+                        <div style="padding: 10px">
+                            <div>
+                                <di style="text-align: left">
+                                    These clauses clash on multiple literals
+                                </di>
+                                <di style="text-align: right">
+                                    <button class="proofButton" @onclick="(e => _choicePrompt = !_choicePrompt)">✖</button>
+                                </di>
+                            </div>
+                            Select the two literals to resolve on
+                            <vertic>
+                                @foreach (var atom in _resolutionFlow.proof.FindClause(_selection.Item1).Literals)
+                                {
+                                    <fol @onclick="e => SetFirstAtom(atom)"
+                                         style="@($"outline: {(_atom1 == atom ? "2px dashed orange" : "1px solid gray")}")">
+                                        @((MarkupString)atom.Print())
+                                    </fol>
+                                }
+                            </vertic>
+                            <vertic>
+                                @foreach (var atom in _resolutionFlow.proof.FindClause(_selection.Item2).Literals)
+                                {
+
+                                    <fol @onclick="e => SetSecondAtom(atom)"
+                                         style="@($"outline: {(_atom2 == atom ? "2px dashed orange" : "1px solid gray")}")">
+                                        @((MarkupString)atom.Print())
+                                    </fol>
+                                }
+                            </vertic>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        @if (_renamePrompt)
+        {
+            <div class="overlay">
+                <div class="selector">
+                    <div style="padding: 10px">
+                        <div>
+                            <di style="text-align: left">
+                                What variable should be renamed?
+                            </di>
+                            <di style="text-align: right">
+                                <button class="proofButton" @onclick="(e => _renamePrompt = !_renamePrompt)">✖</button>
+                            </di>
+                        </div>
+                        <vertic style="padding-bottom: 10px;">
+                            @foreach (var variable in _proofTools.ClauseVariables(_resolutionFlow.proof.FindClause((int) _renameOriginal)))
+                            {
+                                <variables>
+                                    <variable @onclick="e => _renameSource = variable"
+                                            style="@($"outline: {(_renameSource != null && _renameSource == variable ? "2px dashed orange" : "1px solid gray")}")">
+                                        @((MarkupString)new ClausalForm.Variable(variable).Print())
+                                    </variable>
+                                </variables>
+                            }
+                        </vertic>
+                        <EditForm style="padding-bottom: 10px;" Model="@_resolutionFlow" OnSubmit="@RenameEnd">
+                            <InputText @bind-Value="_renameTarget" @oninput="e => StateHasChanged()"/> 
+                            <di style="text-align: right">
+                                @if (_renameTarget != null && Regex.IsMatch(_renameTarget, @"^[a-z]+[0-9]*$"))
+                                {
+                                    <button style="color:green" type="submit">Rename</button>
+                                }
+                                else
+                                {
+                                    <button style="color:red" type="button">Rename</button>
+                                }
+                            </di>
+                        </EditForm>
+
+                    </div>
+                </div>
+            </div>
+        }
+        <table style="margin: auto; text-align:left;">
+            <tbody>
+            @for (int index = 0; index < _resolutionFlow.proof.Applications.Count; index++)
+            {
+                var i = 1 + index;
+                <tr>
+                    <td style="color: black">
+                        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
+                            <math>
+                                @((MarkupString)$"<i>C<sub>{i}</sub> =")
+                            </math>
+                        </Animate>
+                    </td>
+                    <td>
+                        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
+                            <clause draggable="true"
+                                    ondragover="event.preventDefault();"
+                                    style="@($"outline: {(_resolveTarget == i && _resolveTarget != _resolveSource ? "2px dashed orange" : _proofTools.IsEmptyClause(_resolutionFlow.proof.FindClause(i)) ? "1px solid white; background-color: green; color: white" : "1px solid gray")}")"
+                                    @ondragenter="e => SetResolveTarget(i)"
+                                    @ondragstart="e => SetResolveSource(i)"
+                                    @ondrop="e => ResolveEnd()">
+                                <div style="text-align: center;">
+                                    @((MarkupString)_resolutionFlow.proof.FindClause(i).Print())
+                                </div>
+                            </clause>
+                        </Animate>
+                    </td>
+                    <td style="text-align: left; color: black">
+                        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
+                            @((MarkupString)("<i>, " + _resolutionFlow.proof.Applications[i - 1].PrintMethod()))
+                        </Animate>
+                    </td>
+                    @if (_proofTools.ClauseVariables(_resolutionFlow.proof.FindClause(i)).Count > 0)
+                    {
+                        <td style="width=38px">
+                            <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
+                                <button class="proofButton" @onclick="(e => RenameStart(i))">📝</button>
+                            </Animate>
+                        </td>
+                    }
+                    else
+                    {
+                        <td style="width=38px">
+                        </td>
+                    }
+                    @if (!_resolutionFlow.proof.ApplicationUsed(i) && i > _resolutionFlow.proof.Formula.Clauses.Count )
+                    {
+                        <td style="width=38px">
+                            <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
+                                <button class="proofButton" @onclick="(e => Delete(i))">✖</button>
+                            </Animate>
+                        </td>
+                    }
+                    else
+                    {
+                        <td style="width=38px">
+                        </td>
+                    }
+                    <td style="text-align: left; color: black">
+                        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
+                            @((MarkupString)(_resolutionFlow.proof.Applications[i - 1].PrintSubstitutions()))
+                        </Animate>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        @if (_resolutionFlow.proof.Applications.Any(x => _proofTools.IsEmptyClause(x.GetClause())))
+        {
+            <button @onclick="e => CopyProof()">Copy verifiable proof to clipboard</button>
+        }
+
+        <div style="height: 30px; padding-bottom : 50px;">
+            @for (int ei = 0; ei < _errors.Count; ei++)
+            {
+                var m = ((MarkupString)_errors[ei].message);
+                <vertic>
+                    <Animate Animation="Animations.Fade" Duration="TimeSpan.FromSeconds(0.5)">
+                        <message>
+                            @m
+                        </message>
+                    </Animate>
+                    @{
+                        if (_toDeleteErrors <= ei)
+                        {
+                            DeleteError();
+                        }
+                    }
+                </vertic>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <vertic>
+        Please enter a formula at the start screen
+    </vertic>
+}
+
+
+
+
+@code {
+    ResolutionFlow? _resolutionFlow;
+    readonly ProofTools _proofTools = new(true);
+
+    protected override void OnInitialized()
+    {
+        ResolutionFlowContainer.OnStateChange += StateHasChanged;
+        _resolutionFlow = ResolutionFlowContainer.Value;
+    }
+
+    int? _resolveSource;
+    int? _resolveTarget;
+    ClausalForm.Literal? _atom1;
+    ClausalForm.Literal? _atom2;
+    Tuple<int, int>? _selection;
+    List<ProofTools.ResolveError> _errors = new();
+    int _toDeleteErrors;
+    bool _choicePrompt;
+
+
+    bool _renamePrompt;
+    string? _renameSource;
+    string? _renameTarget;
+    int? _renameOriginal;
+
+    private void ResolveEnd()
+    {
+        Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource}");
+        if (_resolveSource == null || _resolveTarget == null)
+        {
+            Console.WriteLine($"Error {_resolveSource}");
+            return;
+        }
+        if (_resolveSource != _resolveTarget)
+        {
+            var result = _proofTools.Resolve(
+                (int) _resolveSource,
+                (int) _resolveTarget,
+                _resolutionFlow?.proof.FindClause((int)_resolveSource),
+                _resolutionFlow?.proof.FindClause((int)_resolveTarget));
+            if (result.IsLeft)
+            {
+                _resolutionFlow?.proof.Applications.Add(result.AsLeft);
+            }
+            if (result.IsMiddle)
+            {
+                _choicePrompt = true;
+                _selection = new Tuple<int, int>((int)_resolveSource, (int)_resolveTarget);
+                StateHasChanged();
+                return;
+            }
+            if (result.IsRight)
+            {
+                _errors.Add(result.AsRight);
+
+                Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.AsRight)} ");
+            }
+        }
+        _resolveSource = null;
+        _resolveTarget = null;
+        StateHasChanged();
+    }
+
+    private void ResolveEndWithAtoms()
+    {
+        Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource} and {_atom1.Print()} {_atom2.Print()}");
+        var result = _proofTools.Resolve(
+            (int)_resolveSource,
+            (int)_resolveTarget,
+            _resolutionFlow?.proof.FindClause((int)_resolveSource),
+            _resolutionFlow?.proof.FindClause((int)_resolveTarget),
+            _atom1,
+            _atom2);
+        if (result.IsLeft)
+        {
+            _resolutionFlow?.proof.Applications.Add(result.AsLeft);
+        }
+        if (result.IsRight)
+        {
+            _errors.Add(result.AsRight);
+            Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.AsRight)} ");
+        }
+
+        _resolveSource = null;
+        _resolveTarget = null;
+        _atom1 = null;
+        _atom2 = null;
+        _choicePrompt = false;
+        StateHasChanged();
+
+    }
+
+    private async void DeleteError()
+    {
+        _toDeleteErrors++;
+        StateHasChanged();
+        await Task.Delay(3000);
+        _toDeleteErrors--;
+        _errors.RemoveAt(0);
+        StateHasChanged();
+    }
+
+    private void SetResolveSource(int index) { _resolveSource = index; StateHasChanged(); }
+
+    private void SetResolveTarget(int index)
+    {
+        if (_resolveSource == null) return;
+        _resolveTarget = index; 
+        StateHasChanged();
+    } 
+
+    private void ResetResolve() { _resolveSource = null; StateHasChanged(); _resolveTarget = null; StateHasChanged(); }
+
+    private void SetFirstAtom(ClausalForm.Literal literal) { _atom1 = literal; StateHasChanged(); }
+
+    private void SetSecondAtom(ClausalForm.Literal literal) { _atom2 = literal; StateHasChanged(); }
+
+    private void Delete(int index) { _resolutionFlow.proof.DeleteApplication(index); StateHasChanged(); }
+
+    private void RenameEnd()
+    {
+        _resolutionFlow.proof.Applications.Add(_proofTools.RenameVariable(_renameSource, _renameTarget, (int)_renameOriginal, _resolutionFlow.proof.FindClause((int)_renameOriginal)));
+        _renameSource = null;
+        _renameTarget = null;
+        _renameOriginal = null;
+        _renamePrompt = false;
+        StateHasChanged();
+    }
+
+    private void RenameStart(int i)
+    {
+        _renameOriginal = i;
+        _renamePrompt = true;
+        StateHasChanged();
+    }
+
+    private void CopyProof()
+    {
+        var c = new Isabelle.AST.ProofConnector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
+        ClipboardService.CopyToClipboard(Isabelle.Generator.generateSingle(c.x.Item1, c.x.Item2));
+    }
+
+}
+

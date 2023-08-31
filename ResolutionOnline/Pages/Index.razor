@@ -1,0 +1,68 @@
+﻿@page "/"
+@using ResolutionOnline.Data
+@using Resolution
+@inject NavigationManager NavManager
+@inject ResolutionFlowContainer ResolutionFlowContainer
+
+<PageTitle>Start</PageTitle>
+
+<center> 
+    <h1>Enter your formula</h1>
+    <EditForm Model="@_resolutionFlow" OnSubmit="@Skip">
+        <vertic>
+            <tt>
+                <InputText id="name" style="width: 450px;" type="code" @bind-Value="_bin" @oninput="Enter"/>
+            </tt>
+        </vertic>
+        <vertic>
+            @((MarkupString)_resolutionFlow.PrintParsed(_parser, _clauseConverter))
+        </vertic>
+        <vertic>
+            <button type="button" @onclick="Alternative">See conversion to clausal form</button>
+            <button type="submit">Skip conversion</button>
+        </vertic>
+    </EditForm>
+</center>
+
+@code {
+    ResolutionFlow? _resolutionFlow;
+    readonly Parser _parser = new(false);
+    readonly ClauseConverter _clauseConverter = new(false);
+    readonly ProofTools _proofTools = new(false);
+
+    string _bin = "Imp (Uni x. (Imp p[x] q[x])) (Imp (Exi x. p[x]) (Exi x. q[x]))";
+
+    private void Skip()
+    {
+        _resolutionFlow.Convert(_clauseConverter,_proofTools);
+        ResolutionFlowContainer.Value = _resolutionFlow;
+        NavManager.NavigateTo("/resolver");
+    }
+
+    private void Alternative()
+    {
+        _resolutionFlow.Convert(_clauseConverter, _proofTools);
+        ResolutionFlowContainer.Value = _resolutionFlow;
+        NavManager.NavigateTo("/converter");
+    }
+    
+    private void Enter(ChangeEventArgs eventArgs)
+    {
+        _resolutionFlow.toParse = eventArgs.Value as string;
+        StateHasChanged();
+    }
+
+    protected override void OnInitialized()
+    {
+        if (ResolutionFlowContainer.Value != null)
+        {
+            _resolutionFlow = ResolutionFlowContainer.Value;
+            _bin = _resolutionFlow.toParse;
+        }
+        else
+        {
+            _resolutionFlow = new(_parser);
+        }
+    }
+
+}
