@@ -1,30 +1,30 @@
 ﻿
 
+using System.Collections;
+
 namespace Resolution
 {
     public class Proof
     {
-        public ClausalForm.ClausalFormula Formula { get; set; }
         public List<IApplication> Applications { get; set; }
 
         public Proof(ClausalForm.ClausalFormula formula)
         {
-            Formula = formula;
             Applications = new List<IApplication>();
-            for (var i=1; i <= Formula.Clauses.Count; i++)
+            for (var i=1; i <= formula.Clauses.Count; i++)
             {
-                Applications.Add(new Copy(i, Formula.Clauses[i-1]));
+                Applications.Add(new Copy(formula.Clauses[i-1]));
             }
         }
 
-        public ClausalForm.Clause FindClause(int n)
+        public ClausalForm.Clause GetClause(int n)
         {
             var current = Applications[n-1];
 
             if (current.GetType() == typeof(Copy))
             {
                 var currentT = (Copy)current;
-                return Formula.Clauses[currentT.FormulaRef-1];
+                return currentT.Clause;
             }
             if (current.GetType() == typeof(Resolve))
             {
@@ -34,24 +34,30 @@ namespace Resolution
             if (current.GetType() == typeof(Rename))
             {
                 var currentT = (Rename)current;
-                return currentT.clause;
+                return currentT.Clause;
             }
             throw new ArgumentException();
         }
 
         // This function finds if an application is used further down the proof, with
         // the intent of allowing/disallowing its removal in the UI
-        public bool ApplicationUsed(int n)
+        public bool MustKeepApplication(int n)
         {
+            if (Applications[n - 1].GetType() == typeof(Copy))
+            {
+                return true;
+            }
             foreach (var application in Applications)
             {
                 if (application.GetType() == typeof(Resolve))
                 {
                     var current = (Resolve)application;
-                    if (current.FirstClause == n || current.SecondClause == n)
-                    {
-                        return true;
-                    } 
+                    if (current.FirstClause == n || current.SecondClause == n) { return true; }
+                }
+                if (application.GetType() == typeof(Rename))
+                {
+                    var current = (Rename)application;
+                    if (current.origin == n) { return true; }
                 }
             }
             return false;
@@ -68,19 +74,32 @@ namespace Resolution
                     int newFirst = current.FirstClause;
                     int newSecond = current.SecondClause;
                     if (current.FirstClause >= n)
+                    {
+                        //current.FirstClause--;
                         newFirst = current.FirstClause-1;
+                    }
                     if (current.SecondClause >= n)
                     {
+                        //current.SecondClause--;
                         newSecond = current.SecondClause-1;
                     }
                     var newResolve = new Resolve(
                         newFirst,
                         newSecond,
                         current.Resolvent,
-                        current.FirstLiteral,
-                        current.SecondLiteral,
+                        current.FirstLiterals,
+                        current.SecondLiterals,
                         current.Substitutions);
                     Applications[i] = newResolve;
+                }
+                if (Applications[i].GetType() == typeof(Rename))
+                {
+                    var current = (Rename)Applications[i];
+                    if (current.origin >= n)
+                    {
+                        current.origin--;
+                        Applications[i] = current;
+                    }
                 }
                 if (i + 1 == n && !deleted)
                 {
@@ -100,12 +119,11 @@ namespace Resolution
         public string PrintSubstitutions();
         public ClausalForm.Clause GetClause();
     }
-
+    
     public class Copy : IApplication
     {
-        public int FormulaRef { get; set; }
         public ClausalForm.Clause Clause { get; set; }
-        public Copy(int formulaRef, ClausalForm.Clause clause) { FormulaRef = formulaRef;
+        public Copy(ClausalForm.Clause clause) {
             Clause = clause;
         }
 
@@ -120,6 +138,8 @@ namespace Resolution
         }
 
         public ClausalForm.Clause GetClause() => Clause;
+        
+        
     }
 
     public class Resolve : IApplication
@@ -128,15 +148,15 @@ namespace Resolution
         public int SecondClause { get; set; }
         public ClausalForm.Clause Resolvent { get; set; }
         public Dictionary<string, ClausalForm.IArgument> Substitutions { get; set; }
-        public ClausalForm.Literal FirstLiteral { get; set; }
-        public ClausalForm.Literal SecondLiteral { get; set; }
-        public Resolve(int firstClause, int secondClause, ClausalForm.Clause resolvent, ClausalForm.Literal firstLiteral, ClausalForm.Literal secondLiteral, Dictionary<string, ClausalForm.IArgument> substitutions)
+        public HashSet<ClausalForm.Literal> FirstLiterals { get; set; }
+        public HashSet<ClausalForm.Literal> SecondLiterals { get; set; }
+        public Resolve(int firstClause, int secondClause, ClausalForm.Clause resolvent, HashSet<ClausalForm.Literal> firstLiterals, HashSet<ClausalForm.Literal> secondLiterals, Dictionary<string, ClausalForm.IArgument> substitutions)
         {
             FirstClause = firstClause;
             SecondClause = secondClause;
             Resolvent = resolvent;
-            FirstLiteral = firstLiteral;
-            SecondLiteral = secondLiteral;
+            FirstLiterals = firstLiterals;
+            SecondLiterals = secondLiterals;
             Substitutions = substitutions;
         }
 
@@ -159,19 +179,24 @@ namespace Resolution
             return str;
         }
         public ClausalForm.Clause GetClause() => Resolvent;
+
+        public List<ClausalForm.Literal> GetFirstLiterals() => FirstLiterals.ToList();
+        public List<ClausalForm.Literal> GetSecondLiterals() => SecondLiterals.ToList();
     }
 
     public class Rename : IApplication
     {
         public int origin;
-        public ClausalForm.Clause clause;
-        public Tuple<string, string> Substitution { get; set; }
+        public ClausalForm.Clause Clause { get; set; }
+        public string originalName;
+        public string newName;
 
-        public Rename(int origin, ClausalForm.Clause clause, Tuple<string, string> substitution)
+        public Rename(int origin, ClausalForm.Clause clause, string originalName, string newName)
         {
             this.origin = origin;
-            this.clause = clause;
-            Substitution = substitution;
+            this.Clause = clause;
+            this.originalName = originalName;
+            this.newName = newName;
         }
 
         public string PrintMethod()
@@ -181,19 +206,18 @@ namespace Resolution
 
         public string PrintSubstitutions()
         {
-            return new ClausalForm.Variable(Substitution.Item2).Print() + " ← " + new ClausalForm.Variable(Substitution.Item1).Print();
+            return new ClausalForm.Variable(newName).Print() + " ← " + new ClausalForm.Variable(originalName).Print();
         }
 
-        public ClausalForm.Clause GetClause() => clause;
-
-        public string GetOldName() => Substitution.Item1;
-        public string GetNewName() => Substitution.Item2;
+        public ClausalForm.Clause GetClause() => Clause;
     }
+
+   
 
 
     public class ProofTools
     {
-        private bool _debugMode = false;
+        private readonly bool _debugMode = false;
 
         public ProofTools(bool debugMode)
         {
@@ -451,7 +475,7 @@ namespace Resolution
                 Console.WriteLine("Resolvent: "+resolvent.Print());
             }
 
-            var resolution = new Resolve(n1, n2, resolvent, a1, a2, allSubstitutions);
+            var resolution = new Resolve(n1, n2, resolvent, new HashSet<ClausalForm.Literal>{a1}, new HashSet<ClausalForm.Literal> { a2 }, allSubstitutions);
             
             return resolution;
         }
@@ -760,7 +784,7 @@ namespace Resolution
             var atoms = clause.Clone();
             var subbed = ApplySubstitutions(clause.Clone().Literals,
                 new Dictionary<string, ClausalForm.IArgument> { { oldName, new ClausalForm.Variable(newName) } });
-            return new Rename(origin, new ClausalForm.Clause(subbed), new Tuple<string, string>(oldName, newName));
+            return new Rename(origin, new ClausalForm.Clause(subbed), oldName, newName);
         }
 
         // checks if arguments are equivalent, or identical

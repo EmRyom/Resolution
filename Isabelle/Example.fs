@@ -1,6 +1,6 @@
 ﻿namespace Isabelle
 
-open Isabelle.AST
+(*open Isabelle.AST
 
 // Unit tests that test the generator and the prover integrated in the generator
 module Example =
@@ -237,3 +237,4 @@ module Example =
     
     )
 
+*)

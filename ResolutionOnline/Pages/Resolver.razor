@@ -35,7 +35,7 @@
                             </div>
                             Select the two literals to resolve on
                             <vertic>
-                                @foreach (var atom in _resolutionFlow.proof.FindClause(_selection.Item1).Literals)
+                                @foreach (var atom in _resolutionFlow.proof.GetClause(_selection.Item1).Literals)
                                 {
                                     <fol @onclick="e => SetFirstAtom(atom)"
                                          style="@($"outline: {(_atom1 == atom ? "2px dashed orange" : "1px solid gray")}")">
@@ -44,7 +44,7 @@
                                 }
                             </vertic>
                             <vertic>
-                                @foreach (var atom in _resolutionFlow.proof.FindClause(_selection.Item2).Literals)
+                                @foreach (var atom in _resolutionFlow.proof.GetClause(_selection.Item2).Literals)
                                 {
 
                                     <fol @onclick="e => SetSecondAtom(atom)"
@@ -72,7 +72,7 @@
                             </di>
                         </div>
                         <vertic style="padding-bottom: 10px;">
-                            @foreach (var variable in _proofTools.ClauseVariables(_resolutionFlow.proof.FindClause((int) _renameOriginal)))
+                            @foreach (var variable in _proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int) _renameOriginal)))
                             {
                                 <variables>
                                     <variable @onclick="e => _renameSource = variable"
@@ -117,12 +117,12 @@
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             <clause draggable="true"
                                     ondragover="event.preventDefault();"
-                                    style="@($"outline: {(_resolveTarget == i && _resolveTarget != _resolveSource ? "2px dashed orange" : _proofTools.IsEmptyClause(_resolutionFlow.proof.FindClause(i)) ? "1px solid white; background-color: green; color: white" : "1px solid gray")}")"
+                                    style="@($"outline: {(_resolveTarget == i && _resolveTarget != _resolveSource ? "2px dashed orange" : _proofTools.IsEmptyClause(_resolutionFlow.proof.GetClause(i)) ? "1px solid white; background-color: green; color: white" : "1px solid gray")}")"
                                     @ondragenter="e => SetResolveTarget(i)"
                                     @ondragstart="e => SetResolveSource(i)"
                                     @ondrop="e => ResolveEnd()">
                                 <div style="text-align: center;">
-                                    @((MarkupString)_resolutionFlow.proof.FindClause(i).Print())
+                                    @((MarkupString)_resolutionFlow.proof.GetClause(i).Print())
                                 </div>
                             </clause>
                         </Animate>
@@ -132,7 +132,7 @@
                             @((MarkupString)("<i>, " + _resolutionFlow.proof.Applications[i - 1].PrintMethod()))
                         </Animate>
                     </td>
-                    @if (_proofTools.ClauseVariables(_resolutionFlow.proof.FindClause(i)).Count > 0)
+                    @if (_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause(i)).Count > 0)
                     {
                         <td style="width=38px">
                             <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
@@ -145,7 +145,7 @@
                         <td style="width=38px">
                         </td>
                     }
-                    @if (!_resolutionFlow.proof.ApplicationUsed(i) && i > _resolutionFlow.proof.Formula.Clauses.Count )
+                    @if (!_resolutionFlow.proof.MustKeepApplication(i))
                     {
                         <td style="width=38px">
                             <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
@@ -242,8 +242,8 @@ else
             var result = _proofTools.Resolve(
                 (int) _resolveSource,
                 (int) _resolveTarget,
-                _resolutionFlow?.proof.FindClause((int)_resolveSource),
-                _resolutionFlow?.proof.FindClause((int)_resolveTarget));
+                _resolutionFlow?.proof.GetClause((int)_resolveSource),
+                _resolutionFlow?.proof.GetClause((int)_resolveTarget));
             if (result.IsLeft)
             {
                 _resolutionFlow?.proof.Applications.Add(result.AsLeft);
@@ -273,8 +273,8 @@ else
         var result = _proofTools.Resolve(
             (int)_resolveSource,
             (int)_resolveTarget,
-            _resolutionFlow?.proof.FindClause((int)_resolveSource),
-            _resolutionFlow?.proof.FindClause((int)_resolveTarget),
+            _resolutionFlow?.proof.GetClause((int)_resolveSource),
+            _resolutionFlow?.proof.GetClause((int)_resolveTarget),
             _atom1,
             _atom2);
         if (result.IsLeft)
@@ -325,7 +325,7 @@ else
 
     private void RenameEnd()
     {
-        _resolutionFlow.proof.Applications.Add(_proofTools.RenameVariable(_renameSource, _renameTarget, (int)_renameOriginal, _resolutionFlow.proof.FindClause((int)_renameOriginal)));
+        _resolutionFlow.proof.Applications.Add(_proofTools.RenameVariable(_renameSource, _renameTarget, (int)_renameOriginal, _resolutionFlow.proof.GetClause((int)_renameOriginal)));
         _renameSource = null;
         _renameTarget = null;
         _renameOriginal = null;
@@ -342,8 +342,8 @@ else
 
     private void CopyProof()
     {
-        var c = new Isabelle.AST.ProofConnector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
-        ClipboardService.CopyToClipboard(Isabelle.Generator.generateSingle(c.x.Item1, c.x.Item2));
+        // var c = new Isabelle.AST.ProofConnector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
+        // ClipboardService.CopyToClipboard(Isabelle.Generator.generateSingle(c.x.Item1, c.x.Item2));
     }
 
 }

@@ -18,8 +18,8 @@ namespace CTests
             var formula = clauseConverter.Compile(parser.Parse(formulaStr));
             Proof proof = new(formula);
 
-            proof.Applications.Add(proofTools.Resolve(1,2,proof.FindClause(1),proof.FindClause(2)).AsLeft);
-            proof.Applications.Add(proofTools.Resolve(3,4,proof.FindClause(3),proof.FindClause(4)).AsLeft);
+            proof.Applications.Add(proofTools.Resolve(1,2,proof.GetClause(1),proof.GetClause(2)).AsLeft);
+            proof.Applications.Add(proofTools.Resolve(3,4,proof.GetClause(3),proof.GetClause(4)).AsLeft);
             
             AST.ProofConnector c = new(Compiler.compileProof(proof));
 
@@ -41,7 +41,7 @@ namespace CTests
             var formula = clauseConverter.Compile(parser.Parse(formulaStr));
             Proof proof = new(formula);
 
-            proof.Applications.Add(proofTools.Resolve(1, 2, proof.FindClause(1), proof.FindClause(2)).AsLeft);
+            proof.Applications.Add(proofTools.Resolve(1, 2, proof.GetClause(1), proof.GetClause(2)).AsLeft);
 
             AST.ProofConnector c = new(Compiler.compileProof(proof));
 

@@ -6,14 +6,10 @@ open AST
 // This module converts the proofs from the Proof.cs type to AST.fs type
 module Compiler =
     
-    let t = ClausalForm in
+    let rec compileFunction (f:ClausalForm.Function):Argument =
+        Fun(f.identifier.Replace("'","_m"), f.args |> List.ofSeq |> List.map compileArg)
 
-    let list (l:System.Collections.Generic.List<'a>):'a list = List.ofSeq(l)
-
-    let rec compileFunction (f:ClausalForm.Function):argument =
-        Fun(f.identifier.Replace("'","_m"), f.args |> list |> List.map compileArg)
-
-    and compileArg (a:ClausalForm.IArgument):argument = 
+    and compileArg (a:ClausalForm.IArgument):Argument = 
         match string <| a.GetType() with
         | "Resolution.ClausalForm+Variable" -> 
             let ar = a :?> ClausalForm.Variable in
@@ -23,37 +19,38 @@ module Compiler =
             compileFunction ar
         | b -> failwith  <| "Type was " + b
 
-    let compileAtom (a:ClausalForm.Literal):Atom = 
-        let args = List.map compileArg <| list a.Args
+    let compileLiteral (a:ClausalForm.Literal):Literal= 
+        let args = List.map compileArg <| List.ofSeq a.Args
         (a.Identifier, args, a.Value)
 
     let compileClause (c:ClausalForm.Clause):Clause =
-        c.Literals |> list |> List.map compileAtom
+        c.Literals |> List.ofSeq |> List.map compileLiteral |> Set.ofList
         
-    let compileFormula (f:ClausalForm.ClausalFormula):ClausalFormula =
-        f.Clauses |> list |> List.map compileClause
-
-
-    
     let compileApplication (a:IApplication):Application =
         match string <| a.GetType() with
         | "Resolution.Copy" -> 
             let ar = a :?> Copy in
-            Copy(ar.FormulaRef)
+            Copy(compileClause ar.Clause)
         | "Resolution.Resolve" -> 
-            let ar = a :?> Resolve
-            let clause = compileClause(ar.Resolvent)
-            let f1 = compileAtom(ar.FirstLiteral)
-            let f2 = compileAtom(ar.SecondLiteral)
-            Resolve(ar.FirstClause, ar.SecondClause, clause, f1, f2)
+            let ar = a :?> Resolve 
+            let clause = compileClause ar.Resolvent 
+            let compileLiterals x = List.map compileLiteral (List.ofSeq <| x) |> Set.ofList
+            let rec convertDict = function
+                | x::xs -> (Var(x), compileArg ar.Substitutions[x])::convertDict xs
+                | [] -> []
+            Resolve(ar.FirstClause, ar.SecondClause, clause, 
+                (compileLiterals (ar.GetFirstLiterals()),
+                 compileLiterals (ar.GetSecondLiterals()),
+                 Set.ofList <| convertDict (List.ofSeq(ar.Substitutions.Keys))
+                )
+            )
         | "Resolution.Rename" ->
-            let ar = a:?> Rename
-            Rename(ar.origin, compileClause ar.clause, ar.GetOldName(), ar.GetNewName())
+            let ar = a :?> Rename
+            Rename(ar.origin, compileClause ar.Clause, ar.originalName, ar.newName)
         | b -> failwith  <| "Type was " + b
 
     let compileProof (f:Resolution.Proof):Proof =
-        let formula = compileFormula f.Formula
-        (formula, f.Applications |> list |> List.map compileApplication)
+        (f.Applications |> List.ofSeq |> List.map compileApplication)
 
 
 
