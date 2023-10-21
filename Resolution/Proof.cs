@@ -1,6 +1,4 @@
-﻿
-
-using System.Collections;
+﻿using static Resolution.ClausalForm;
 
 namespace Resolution
 {
@@ -8,7 +6,7 @@ namespace Resolution
     {
         public List<IApplication> Applications { get; set; }
 
-        public Proof(ClausalForm.ClausalFormula formula)
+        public Proof(ClausalFormula formula)
         {
             Applications = new List<IApplication>();
             for (var i=1; i <= formula.Clauses.Count; i++)
@@ -17,7 +15,7 @@ namespace Resolution
             }
         }
 
-        public ClausalForm.Clause GetClause(int n)
+        public Clause GetClause(int n)
         {
             var current = Applications[n-1];
 
@@ -117,13 +115,13 @@ namespace Resolution
     {
         public string PrintMethod();
         public string PrintSubstitutions();
-        public ClausalForm.Clause GetClause();
+        public Clause GetClause();
     }
     
     public class Copy : IApplication
     {
-        public ClausalForm.Clause Clause { get; set; }
-        public Copy(ClausalForm.Clause clause) {
+        public Clause Clause { get; set; }
+        public Copy(Clause clause) {
             Clause = clause;
         }
 
@@ -137,20 +135,18 @@ namespace Resolution
             return "";
         }
 
-        public ClausalForm.Clause GetClause() => Clause;
-        
-        
+        public Clause GetClause() => Clause;
     }
 
     public class Resolve : IApplication
     {
         public int FirstClause { get; set; }
         public int SecondClause { get; set; }
-        public ClausalForm.Clause Resolvent { get; set; }
-        public Dictionary<string, ClausalForm.IArgument> Substitutions { get; set; }
-        public HashSet<ClausalForm.Literal> FirstLiterals { get; set; }
-        public HashSet<ClausalForm.Literal> SecondLiterals { get; set; }
-        public Resolve(int firstClause, int secondClause, ClausalForm.Clause resolvent, HashSet<ClausalForm.Literal> firstLiterals, HashSet<ClausalForm.Literal> secondLiterals, Dictionary<string, ClausalForm.IArgument> substitutions)
+        public Clause Resolvent { get; set; }
+        public Dictionary<string, IArgument> Substitutions { get; set; }
+        public HashSet<Literal> FirstLiterals { get; set; }
+        public HashSet<Literal> SecondLiterals { get; set; }
+        public Resolve(int firstClause, int secondClause, Clause resolvent, HashSet<Literal> firstLiterals, HashSet<Literal> secondLiterals, Dictionary<string, IArgument> substitutions)
         {
             FirstClause = firstClause;
             SecondClause = secondClause;
@@ -178,72 +174,62 @@ namespace Resolution
             }
             return str;
         }
-        public ClausalForm.Clause GetClause() => Resolvent;
+        public Clause GetClause() => Resolvent;
 
-        public List<ClausalForm.Literal> GetFirstLiterals() => FirstLiterals.ToList();
-        public List<ClausalForm.Literal> GetSecondLiterals() => SecondLiterals.ToList();
+        public List<Literal> GetFirstLiterals() => FirstLiterals.ToList();
+        public List<Literal> GetSecondLiterals() => SecondLiterals.ToList();
     }
 
     public class Rename : IApplication
     {
         public int origin;
-        public ClausalForm.Clause Clause { get; set; }
+        public Clause Clause { get; set; }
         public string originalName;
         public string newName;
 
-        public Rename(int origin, ClausalForm.Clause clause, string originalName, string newName)
+        public Rename(int origin, Clause clause, string originalName, string newName)
         {
             this.origin = origin;
-            this.Clause = clause;
+            Clause = clause;
             this.originalName = originalName;
             this.newName = newName;
         }
 
-        public string PrintMethod()
-        {
-            return $"Renamed variable in C<sub>{origin}</sub>";
-        }
+        public string PrintMethod() => $"Renamed variable in C<sub>{origin}</sub>";
 
         public string PrintSubstitutions()
         {
-            return new ClausalForm.Variable(newName).Print() + " ← " + new ClausalForm.Variable(originalName).Print();
+            return new Variable(newName).Print() + " ← " + new Variable(originalName).Print();
         }
 
-        public ClausalForm.Clause GetClause() => Clause;
+        public Clause GetClause() => Clause;
     }
-
-   
-
 
     public class ProofTools
     {
         private readonly bool _debugMode = false;
 
-        public ProofTools(bool debugMode)
-        {
-            _debugMode = debugMode;
-        }
+        public ProofTools(bool debugMode) => _debugMode = debugMode;
 
         //Resolve -> Try to find which atoms clash within two clauses given (by the user) 
         //Gives either 1. a resolve application 
         //             2. a prompt (bool) for the user to manually designate the atoms to resolve on (in case there's multiple)
         //             3. an error in case no clashes are found
-        public Either<Resolve, MultipleClashes, ResolveError> Resolve(int n1, int n2, ClausalForm.Clause c1, ClausalForm.Clause c2)
+        public Either3<Resolve, MultipleClashes, ResolveError> Resolve(int n1, int n2, Clause c1, Clause c2)
         {
             if (_debugMode)
             {
                 Console.WriteLine($"Resolving: {c1.Print()} and {c2.Print()}");
             }
 
-            ClausalForm.Literal? a1 = null;
-            ClausalForm.Literal? a2 = null;
+            Literal? a1 = null;
+            Literal? a2 = null;
             UnificationException? e = null;
 
-
             // First lets try to find clashing literals by iterating across all literals
-            foreach (ClausalForm.Literal at1 in c1.Literals)
+            foreach (Literal at1 in c1.Literals)
             {
-                foreach (ClausalForm.Literal at2 in c2.Literals)
+                foreach (Literal at2 in c2.Literals)
                 {
                     if (at1.Identifier == at2.Identifier && at1.Value != at2.Value)
                     {
@@ -279,20 +265,45 @@ namespace Resolution
                 return err;
             }
             // If we found a pair of clashing literals, we go on.
-            return Resolve(n1,n2,c1,c2,a1,a2); 
+            return ResolveSingular(n1,n2,c1,c2,a1,a2); 
         }
 
         public struct MultipleClashes { public MultipleClashes() { } }
 
-        public Either<Resolve, MultipleClashes, ResolveError> Resolve(int n1, int n2, ClausalForm.Clause c1,
-            ClausalForm.Clause c2, ClausalForm.Literal a1, ClausalForm.Literal a2)
+
+        public Either<Resolve, ResolveError> Resolve(int n1, int n2, Clause c1, Clause c2,
+            HashSet<Literal> l1, HashSet<Literal> l2)
+        {
+            List<Tuple<IArgument, IArgument>>? substitutions;
+
+            try
+            {
+                substitutions = Unify(l1, l2);
+            }
+            catch (Exception e)
+            {
+
+            }
+
+
+            throw new NotImplementedException();
+        }
+
+        private List<Tuple<IArgument, IArgument>> Unify(HashSet<Literal> l1, HashSet<Literal> l2)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        public Either3<Resolve, MultipleClashes, ResolveError> ResolveSingular(int n1, int n2, Clause c1,
+            Clause c2, Literal a1, Literal a2)
         {
             if (_debugMode)
             {
                 Console.WriteLine($"Resolving: {c1.Print()} and {c2.Print()} with {a1.Print()} and {a2.Print()}");
             }
 
-            List<Tuple<ClausalForm.IArgument, ClausalForm.IArgument>>? substitutions;
+            List<Tuple<IArgument, IArgument>>? substitutions;
 
             try
             {
@@ -320,7 +331,7 @@ namespace Resolution
             }
 
             // Keep track of the substitution types
-            Dictionary<string, ClausalForm.IArgument> functions = new Dictionary<string, ClausalForm.IArgument>();
+            Dictionary<string, IArgument> functions = new Dictionary<string, IArgument>();
             Dictionary<string, string> variables =  new Dictionary<string, string>();
 
             foreach (var substitution in substitutions)
@@ -329,10 +340,10 @@ namespace Resolution
                 var arg2 = substitution.Item2;
 
                 // Handle the case of one part being a variable and the other an function in this specific order
-                if (arg1.GetType() == typeof(ClausalForm.Variable) && arg2.GetType() == typeof(ClausalForm.Function))
+                if (arg1.GetType() == typeof(Variable) && arg2.GetType() == typeof(Function))
                 {
-                    var arg1T = (ClausalForm.Variable)arg1;
-                    var arg2T = (ClausalForm.Function)arg2;
+                    var arg1T = (Variable)arg1;
+                    var arg2T = (Function)arg2;
                     if (VariableOccurs(arg1T.identifier, arg2T))
                     {
                         return new ResolveError($"Circular substitution for variable {arg1T.identifier}",
@@ -367,10 +378,10 @@ namespace Resolution
                 }
 
                 // Handle the same case but in reverse order (no significant changes)
-                if (arg1.GetType() == typeof(ClausalForm.Function) && arg2.GetType() == typeof(ClausalForm.Variable))
+                if (arg1.GetType() == typeof(Function) && arg2.GetType() == typeof(Variable))
                 {
-                    var arg1T = (ClausalForm.Variable)arg2;
-                    var arg2T = (ClausalForm.Function)arg1;
+                    var arg1T = (Variable)arg2;
+                    var arg2T = (Function)arg1;
 
                     if (VariableOccurs(arg1T.identifier, arg2T))
                     {
@@ -401,10 +412,10 @@ namespace Resolution
                 }
 
                 // Handle the case of both arugments being variables.
-                if (arg1.GetType() == typeof(ClausalForm.Variable) && arg2.GetType() == typeof(ClausalForm.Variable))
+                if (arg1.GetType() == typeof(Variable) && arg2.GetType() == typeof(Variable))
                 {
-                    var arg1T = (ClausalForm.Variable)arg1;
-                    var arg2T = (ClausalForm.Variable)arg2;
+                    var arg1T = (Variable)arg1;
+                    var arg2T = (Variable)arg2;
 
                     if (arg1T.identifier == arg2T.identifier)
                     {
@@ -445,8 +456,8 @@ namespace Resolution
                 return new ResolveError($"The unifier of these two clauses contains circular substitutions", Error.CircularSubstitution);
             }
 
-            var allSubstitutions = new Dictionary<string, ClausalForm.IArgument>();
-            foreach (var key in variables.Keys) allSubstitutions[key] = new ClausalForm.Variable(variables[key]);
+            var allSubstitutions = new Dictionary<string, IArgument>();
+            foreach (var key in variables.Keys) allSubstitutions[key] = new Variable(variables[key]);
             foreach (var key in functions.Keys) allSubstitutions[key] = functions[key];
 
             var atoms1 = c1.Literals.ToList();
@@ -457,7 +468,7 @@ namespace Resolution
             var newAtoms = ApplySubstitutions(atoms1, allSubstitutions);
             newAtoms.AddRange(ApplySubstitutions(atoms2, allSubstitutions));
 
-            var resolvent = ApplyFactoring(new ClausalForm.Clause(newAtoms));
+            var resolvent = ApplyFactoring(new Clause(newAtoms));
             if (_debugMode)
             {
                 foreach (var atom in atoms1)
@@ -475,12 +486,12 @@ namespace Resolution
                 Console.WriteLine("Resolvent: "+resolvent.Print());
             }
 
-            var resolution = new Resolve(n1, n2, resolvent, new HashSet<ClausalForm.Literal>{a1}, new HashSet<ClausalForm.Literal> { a2 }, allSubstitutions);
+            var resolution = new Resolve(n1, n2, resolvent, new HashSet<Literal>{a1}, new HashSet<Literal> { a2 }, allSubstitutions);
             
             return resolution;
         }
 
-        private bool CheckForCircularSubstitutions(Dictionary<string, string> variables, Dictionary<string, ClausalForm.IArgument> functions)
+        private bool CheckForCircularSubstitutions(Dictionary<string, string> variables, Dictionary<string, IArgument> functions)
         {
             // Left side is dependent on the right side.
             // Dependency set contains a tuple of bool and string, where bool represents whether the variable is encased in a function
@@ -552,59 +563,59 @@ namespace Resolution
             return false;
         }
 
-        public HashSet<string> ClauseVariables(ClausalForm.Clause clause)
+        public HashSet<string> ClauseVariables(Clause clause)
         {
             return clause.Literals.SelectMany(atom => atom.Args.SelectMany(ArgumentVariables)).ToHashSet();
         }
 
-        private List<string> ArgumentVariables(ClausalForm.IArgument argument)
+        private List<string> ArgumentVariables(IArgument argument)
         {
-            if (argument.GetType() == typeof(ClausalForm.Variable))
-                return new List<string> { ((ClausalForm.Variable)argument).identifier };
-            if (argument.GetType() == typeof(ClausalForm.Function))
-                return ((ClausalForm.Function)argument).args.SelectMany(ArgumentVariables).ToList();
+            if (argument.GetType() == typeof(Variable))
+                return new List<string> { ((Variable)argument).identifier };
+            if (argument.GetType() == typeof(Function))
+                return ((Function)argument).args.SelectMany(ArgumentVariables).ToList();
             throw new ArgumentException();
         }
 
 
-        private List<ClausalForm.Literal> ApplySubstitutions(List<ClausalForm.Literal> atoms, Dictionary<string,ClausalForm.IArgument> substitutions)
+        private List<Literal> ApplySubstitutions(List<Literal> atoms, Dictionary<string,IArgument> substitutions)
         {
-            List<ClausalForm.Literal>? substituted1 = null;
-            List<ClausalForm.Literal>? substituted2 = atoms.ToList();
+            List<Literal>? substituted1 = null;
+            List<Literal>? substituted2 = atoms.ToList();
 
-            while (substituted1 == null || !Eq(new ClausalForm.Clause(substituted1), new ClausalForm.Clause(substituted2),true))
+            while (substituted1 == null || !Eq(new Clause(substituted1), new Clause(substituted2),true))
             {
                 substituted1 = substituted2.ToList();
                 substituted2 = substituted1.Select(atom =>
-                        new ClausalForm.Literal(atom.Identifier, atom.Value, ApplySubstitutions(atom.Args, substitutions)))
+                        new Literal(atom.Identifier, atom.Value, ApplySubstitutions(atom.Args, substitutions)))
                     .ToList();
             }
             return substituted1;
         }
 
-        private List<ClausalForm.IArgument> ApplySubstitutions(List<ClausalForm.IArgument> arguments, Dictionary<string, ClausalForm.IArgument> substitutions)
+        private List<IArgument> ApplySubstitutions(List<IArgument> arguments, Dictionary<string, IArgument> substitutions)
         {
-            var newArgument = new List<ClausalForm.IArgument>();
+            var newArgument = new List<IArgument>();
             foreach (var argument in arguments)
             {
-                if (argument.GetType() == typeof(ClausalForm.Variable))
+                if (argument.GetType() == typeof(Variable))
                 {
-                    var variable = (ClausalForm.Variable) argument;
+                    var variable = (Variable) argument;
                     newArgument.Add(substitutions.Keys.Any(x => x == variable.identifier)
                         ? substitutions[substitutions.Keys.First(x => x == variable.identifier)]
                         : argument);
                 }
-                if (argument.GetType() == typeof(ClausalForm.Function))
+                if (argument.GetType() == typeof(Function))
                 {
-                    var function = (ClausalForm.Function) argument;
-                    newArgument.Add(new ClausalForm.Function(function.identifier,
+                    var function = (Function) argument;
+                    newArgument.Add(new Function(function.identifier,
                         ApplySubstitutions(function.args, substitutions)));
                 }
             }
             return newArgument;
         }
 
-        public ClausalForm.Clause ApplyFactoring(ClausalForm.Clause clause)
+        public Clause ApplyFactoring(Clause clause)
         {
             if (_debugMode)
             {
@@ -624,7 +635,7 @@ namespace Resolution
                         {
                             var removeDuplicateClause = atoms.ToList();
                             removeDuplicateClause.Remove(atoms[j]);
-                            return ApplyFactoring(new ClausalForm.Clause(removeDuplicateClause));
+                            return ApplyFactoring(new Clause(removeDuplicateClause));
                         }
 
                         if (!atoms[j].Args.SelectMany(ArgumentVariables)
@@ -633,7 +644,7 @@ namespace Resolution
                         {
                             var removeDuplicateClause = atoms.ToList();
                             removeDuplicateClause.Remove(atoms[j]);
-                            return ApplyFactoring(new ClausalForm.Clause(removeDuplicateClause));
+                            return ApplyFactoring(new Clause(removeDuplicateClause));
                         }
                     }
                 }
@@ -642,11 +653,11 @@ namespace Resolution
             return clause;
         }
 
-        private bool VariableOccurs(string varname, ClausalForm.IArgument arg)
+        private bool VariableOccurs(string varname, IArgument arg)
         {
-            if (arg.GetType() == typeof(ClausalForm.Function))
+            if (arg.GetType() == typeof(Function))
             {
-                var argT = (ClausalForm.Function)arg;
+                var argT = (Function)arg;
                 foreach (var ar in argT.args)
                 {
                     if (VariableOccurs(varname, ar))
@@ -655,9 +666,9 @@ namespace Resolution
                     }
                 }
             }
-            if (arg.GetType() == typeof(ClausalForm.Variable))
+            if (arg.GetType() == typeof(Variable))
             {
-                var argT = (ClausalForm.Variable)arg;
+                var argT = (Variable)arg;
                 return argT.identifier == varname;
             }
 
@@ -687,26 +698,41 @@ namespace Resolution
             NotDisjointVariables
         }
 
-        public class Either<TLeft, TMiddle, TRight>
+
+        public class Either<Left, Right>
         {
             private readonly object _value;
-            private Either(object value)
+            private Either(object value) { _value = value; }
+
+            public static implicit operator Either<Left, Right>(Left value) => new(value);
+            public static implicit operator Either<Left, Right>(Right value) => new(value);
+
+            public bool IsSuccesful => _value is Left;
+            public Left Resolve => (Left)_value;
+            public Right Error => (Right)_value;
+        }
+
+
+        public class Either3<TLeft, TMiddle, TRight>
+        {
+            private readonly object _value;
+            private Either3(object value)
             {
                 _value = value;
             }
-            public static implicit operator Either<TLeft, TMiddle, TRight>(TLeft value)
+            public static implicit operator Either3<TLeft, TMiddle, TRight>(TLeft value)
             {
-                return new Either<TLeft, TMiddle, TRight>(value);
+                return new Either3<TLeft, TMiddle, TRight>(value);
             }
 
-            public static implicit operator Either<TLeft, TMiddle, TRight>(TMiddle value)
+            public static implicit operator Either3<TLeft, TMiddle, TRight>(TMiddle value)
             {
-                return new Either<TLeft, TMiddle, TRight>(value);
+                return new Either3<TLeft, TMiddle, TRight>(value);
             }
 
-            public static implicit operator Either<TLeft, TMiddle, TRight>(TRight value)
+            public static implicit operator Either3<TLeft, TMiddle, TRight>(TRight value)
             {
-                return new Either<TLeft, TMiddle, TRight>(value);
+                return new Either3<TLeft, TMiddle, TRight>(value);
             }
             public bool IsLeft => _value is TLeft;
             public bool IsMiddle => _value is TMiddle;
@@ -717,10 +743,10 @@ namespace Resolution
         }
 
 
-        private List<Tuple<ClausalForm.IArgument, ClausalForm.IArgument>> Unify(ClausalForm.Literal a1,
-            ClausalForm.Literal a2)
+        private List<Tuple<IArgument, IArgument>> Unify(Literal a1,
+            Literal a2)
         {
-            var list = new List<Tuple<ClausalForm.IArgument, ClausalForm.IArgument>>();
+            var list = new List<Tuple<IArgument, IArgument>>();
             if (a1.Identifier != a2.Identifier || a1.Value == a2.Value)
             {
                 throw new UnificationException("Literals do not clash each other");
@@ -737,16 +763,16 @@ namespace Resolution
             return list;
         }
 
-        private List<Tuple<ClausalForm.IArgument, ClausalForm.IArgument>> Unify(ClausalForm.IArgument a1,
-            ClausalForm.IArgument a2)
+        private List<Tuple<IArgument, IArgument>> Unify(IArgument a1,
+            IArgument a2)
         {
-            var list = new List<Tuple<ClausalForm.IArgument, ClausalForm.IArgument>>();
+            var list = new List<Tuple<IArgument, IArgument>>();
             if (a1.GetType() == a2.GetType())
             {
-                if (a1.GetType() == typeof(ClausalForm.Function))
+                if (a1.GetType() == typeof(Function))
                 {
-                    var a1T = (ClausalForm.Function)a1;
-                    var a2T = (ClausalForm.Function)a2;
+                    var a1T = (Function)a1;
+                    var a2T = (Function)a2;
                     if (a1T.identifier != a2T.identifier)
                     {
                         throw new UnificationException("Functions differ between atoms");
@@ -762,14 +788,14 @@ namespace Resolution
                         list.AddRange(Unify(iteration.Left, iteration.Right));
                     }
                 }
-                if (a1.GetType() == typeof(ClausalForm.Variable))
+                if (a1.GetType() == typeof(Variable))
                 {
-                    list.Add(new Tuple<ClausalForm.IArgument, ClausalForm.IArgument>(a1, a2));
+                    list.Add(new Tuple<IArgument, IArgument>(a1, a2));
                 }
             }
             else
             {
-                list.Add(new Tuple<ClausalForm.IArgument, ClausalForm.IArgument>(a1, a2));
+                list.Add(new Tuple<IArgument, IArgument>(a1, a2));
             }
             return list;
         }
@@ -779,28 +805,28 @@ namespace Resolution
             public UnificationException(string message) : base(message) { }
         }
 
-        public Rename RenameVariable(string oldName, string newName, int origin, ClausalForm.Clause clause)
+        public Rename RenameVariable(string oldName, string newName, int origin, Clause clause)
         {
             var atoms = clause.Clone();
             var subbed = ApplySubstitutions(clause.Clone().Literals,
-                new Dictionary<string, ClausalForm.IArgument> { { oldName, new ClausalForm.Variable(newName) } });
-            return new Rename(origin, new ClausalForm.Clause(subbed), oldName, newName);
+                new Dictionary<string, IArgument> { { oldName, new Variable(newName) } });
+            return new Rename(origin, new Clause(subbed), oldName, newName);
         }
 
         // checks if arguments are equivalent, or identical
-        public bool Eq(ClausalForm.IArgument one, ClausalForm.IArgument two, bool identical)
+        public bool Eq(IArgument one, IArgument two, bool identical)
         {
-            if (one.GetType() == typeof(ClausalForm.Variable) && two.GetType() == typeof(ClausalForm.Variable))
+            if (one.GetType() == typeof(Variable) && two.GetType() == typeof(Variable))
             {
-                var typedOne = (ClausalForm.Variable)one;
-                var typedTwo = (ClausalForm.Variable)two;
+                var typedOne = (Variable)one;
+                var typedTwo = (Variable)two;
                 return typedOne.identifier == typedTwo.identifier || !identical;
             }
 
-            if (one.GetType() == typeof(ClausalForm.Function) && two.GetType() == typeof(ClausalForm.Function))
+            if (one.GetType() == typeof(Function) && two.GetType() == typeof(Function))
             {
-                var typedOne = (ClausalForm.Function)one;
-                var typedTwo = (ClausalForm.Function)two;
+                var typedOne = (Function)one;
+                var typedTwo = (Function)two;
                 if (typedOne.args.Count != typedTwo.args.Count || typedOne.identifier != typedTwo.identifier)
                 {
                     return false;
@@ -817,7 +843,7 @@ namespace Resolution
             return false;
         }
 
-        public bool Eq(ClausalForm.Literal one, ClausalForm.Literal two, bool identical)
+        public bool Eq(Literal one, Literal two, bool identical)
         {
             if (one.Value != two.Value || one.Identifier != two.Identifier || one.Args.Count != two.Args.Count)
             {
@@ -832,7 +858,7 @@ namespace Resolution
             return condition;
         }
 
-        public bool Eq(ClausalForm.Clause one, ClausalForm.Clause two, bool identical)
+        public bool Eq(Clause one, Clause two, bool identical)
         {
             if (identical)
             {
@@ -872,9 +898,9 @@ namespace Resolution
             }
             return true;
         }
-        public bool IsEmptyClause(ClausalForm.Clause clause)
+        public bool IsEmptyClause(Clause clause)
         {
-            return Eq(clause, new ClausalForm.Clause(new List<ClausalForm.Literal>()), false);
+            return Eq(clause, new Clause(new List<Literal>()), false);
         }
     }
 }
