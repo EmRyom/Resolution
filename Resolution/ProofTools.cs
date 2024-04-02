@@ -697,4 +697,23 @@ public class ProofTools
     {
         return Eq(clause, new ClausalForm.Clause(new List<ClausalForm.Literal>()), false);
     }
+
+    /// <summary>
+    /// Pretty print sets of literals
+    /// </summary>
+    /// <param name="literals"></param>
+    /// <returns></returns>
+    public string Print(HashSet<ClausalForm.Literal> literals)
+    {
+        var result = string.Empty;
+        var list = literals.ToList();
+
+        for (var index = 0; index < list.Count; index ++)
+        {
+            result += list[index].Print() ;
+            if (index != list.Count - 1) result += ", ";
+        }
+
+        return result;
+    }
 }

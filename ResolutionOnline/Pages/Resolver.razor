@@ -7,6 +7,7 @@
 @using BlazorAnimate
 @inject Clipboard.IClipboardService ClipboardService
 
+@using static Resolution.ClausalForm;
 
 <h3>Resolver</h3>
 
@@ -15,7 +16,7 @@
     <div style="margin: auto; width:100%; text-align:center;">
         @if (_choicePrompt)
         {
-            if (_atom1 != null && _atom2 != null)
+            if (_literals1 != null && _literals2 != null)
             {
                 ResolveEndWithAtoms();
             }
@@ -35,21 +36,21 @@
                             </div>
                             Select the two literals to resolve on
                             <vertic>
-                                @foreach (var atom in _resolutionFlow.proof.GetClause(_selection.Item1).Literals)
+                                @foreach (var literal in _resolutionFlow.proof.GetClause(_selection.Item1).Literals)
                                 {
-                                    <fol @onclick="e => SetFirstAtom(atom)"
-                                         style="@($"outline: {(_atom1 == atom ? "2px dashed orange" : "1px solid gray")}")">
-                                        @((MarkupString)atom.Print())
+                                    <fol @onclick="e => SetFirstAtom(literal)"
+                                         style="@($"outline: {(_literals1.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
+                                        @((MarkupString)literal.Print())
                                     </fol>
                                 }
                             </vertic>
                             <vertic>
-                                @foreach (var atom in _resolutionFlow.proof.GetClause(_selection.Item2).Literals)
+                                @foreach (var literal in _resolutionFlow.proof.GetClause(_selection.Item2).Literals)
                                 {
 
-                                    <fol @onclick="e => SetSecondAtom(atom)"
-                                         style="@($"outline: {(_atom2 == atom ? "2px dashed orange" : "1px solid gray")}")">
-                                        @((MarkupString)atom.Print())
+                                    <fol @onclick="e => SetSecondAtom(literal)"
+                                         style="@($"outline: {(_literals2.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
+                                        @((MarkupString)literal.Print())
                                     </fol>
                                 }
                             </vertic>
@@ -77,7 +78,7 @@
                                 <variables>
                                     <variable @onclick="e => _renameSource = variable"
                                             style="@($"outline: {(_renameSource != null && _renameSource == variable ? "2px dashed orange" : "1px solid gray")}")">
-                                        @((MarkupString)new ClausalForm.Variable(variable).Print())
+                                        @((MarkupString)new Variable(variable).Print())
                                     </variable>
                                 </variables>
                             }
@@ -210,21 +211,47 @@ else
 
     protected override void OnInitialized()
     {
+        // Update the state 
         ResolutionFlowContainer.OnStateChange += StateHasChanged;
         _resolutionFlow = ResolutionFlowContainer.Value;
     }
 
-    int? _resolveSource;
-    int? _resolveTarget;
-    ClausalForm.Literal? _atom1;
-    ClausalForm.Literal? _atom2;
+
+    /// <summary>
+    /// 1st clause that is being resolved on.
+    /// </summary>
+    int? _resolveSource; 
+    /// <summary>
+    /// 2nd clause that is being resolved on.
+    /// </summary>
+    int? _resolveTarget; 
+
+    HashSet<Literal> _literals1 = new HashSet<Literal>() { };
+    HashSet<Literal> _literals2 = new HashSet<Literal>() { };
+
+    /// <summary>
+    /// The two clauses that are selected for resolution.
+    /// </summary>
     Tuple<int, int>? _selection;
+
     List<ProofTools.ResolveError> _errors = new();
-    int _toDeleteErrors;
-    bool _choicePrompt;
 
+    /// <summary>
+    /// Indications how many error messages are currently displayed
+    /// </summary>
+    int _toDeleteErrors; // Indications how many error messages are currently displayed.
+    /// <summary>
+    /// Indicates whether the choice prompt window should be shown.
+    /// </summary>
+    bool _choicePrompt; // 
 
-    bool _renamePrompt;
+    /// <summary>
+    /// Indicates whether the rename prompt window should be shown
+    /// </summary>
+    bool _renamePrompt; 
+    /// <summary>
+    /// 
+    /// </summary>
     string? _renameSource;
     string? _renameTarget;
     int? _renameOriginal;
@@ -269,28 +296,29 @@ else
 
     private void ResolveEndWithAtoms()
     {
-        Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource} and {_atom1.Print()} {_atom2.Print()}");
+        Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource} and {_proofTools.Print(_literals1)} {_proofTools.Print(_literals2)}");
         var result = _proofTools.Resolve(
             (int)_resolveSource,
             (int)_resolveTarget,
             _resolutionFlow?.proof.GetClause((int)_resolveSource),
             _resolutionFlow?.proof.GetClause((int)_resolveTarget),
-            _atom1,
-            _atom2);
-        if (result.IsLeft)
+            _literals1,
+            _literals2);
+        if (result.IsSuccesful)
         {
-            _resolutionFlow?.proof.Applications.Add(result.AsLeft);
+            _resolutionFlow?.proof.Applications.Add(result.Resolve);
         }
-        if (result.IsRight)
+        else 
         {
-            _errors.Add(result.AsRight);
-            Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.AsRight)} ");
+            _errors.Add(result.Error);
+            Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.Error)} ");
         }
 
+        // Reset the proof step values to their original state, where nothing has been chosen yet.
         _resolveSource = null;
         _resolveTarget = null;
-        _atom1 = null;
-        _atom2 = null;
+        _literals1 = new HashSet<Literal> {};
+        _literals2 = new HashSet<Literal> {};
         _choicePrompt = false;
         StateHasChanged();
 
@@ -317,9 +345,9 @@ else
 
     private void ResetResolve() { _resolveSource = null; StateHasChanged(); _resolveTarget = null; StateHasChanged(); }
 
-    private void SetFirstAtom(ClausalForm.Literal literal) { _atom1 = literal; StateHasChanged(); }
+    private void SetFirstAtom(Literal literal) { _literals1.Add(literal); StateHasChanged(); }
 
-    private void SetSecondAtom(ClausalForm.Literal literal) { _atom2 = literal; StateHasChanged(); }
+    private void SetSecondAtom(Literal literal) { _literals2.Add(literal); StateHasChanged(); }
 
     private void Delete(int index) { _resolutionFlow.proof.DeleteApplication(index); StateHasChanged(); }
 

@@ -5,6 +5,10 @@ namespace ResolutionOnline.Data
 {
     public class ResolutionFlow
     {
+
+        /// <summary>
+        /// Users text entry
+        /// </summary>
         public string toParse = "Imp (Uni x. (Imp p[x] q[x])) (Imp (Exi x. p[x]) (Exi x. q[x]))";
         public GeneralForm.IFormula? toConvert;
         public Proof? proof;
