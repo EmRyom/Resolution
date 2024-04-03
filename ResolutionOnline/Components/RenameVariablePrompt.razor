@@ -1,0 +1,61 @@
+﻿@using System.Text.RegularExpressions;
+@using static Resolution.ClausalForm
+
+<div class="overlay">
+    <div class="selector">
+        <div style="padding: 10px">
+            <div>
+                <di style="text-align: left">
+                    What variable should be renamed?
+                </di>
+                <di style="text-align: right">
+                    <button class="proofButton" @onclick=CancelRenaming>✖</button>
+                </di>
+            </div>
+            <vertic style="padding-bottom: 10px;">
+                @foreach (var variable in variablesInClause)
+                {
+                    <variables>
+                        <variable @onclick="e => Source = variable"
+                                  style="@($"outline: {(Source != null && Source == variable ? "2px dashed orange" : "1px solid gray")}")">
+                            @((MarkupString)new Variable(variable).Print())
+                        </variable>
+                    </variables>
+                }
+            </vertic>
+            <EditForm style="padding-bottom: 10px;" OnSubmit="e => RenameEnd.InvokeAsync(this)" Model="@this">
+                <InputText @bind-Value="@Target" @oninput="e => StateHasChanged()"/>
+                <di style="text-align: right">
+                    @if (Target != null && Regex.IsMatch(Target, @"^[a-z]+[0-9]*$"))
+                    {
+                        <button style="color:green" type="submit">Rename</button>
+                    }
+                    else
+                    {
+                        <button style="color:red" type="button">Rename</button>
+                    }
+                </di>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public HashSet<string> variablesInClause { get; set; }
+
+    [Parameter]
+    public EventCallback<RenameVariablePrompt> RenameEnd { get; set; }
+
+    [Parameter]
+    public EventCallback CancelRenaming { get; set; }
+
+    /// <summary>
+    /// Original Variable Name
+    /// </summary>
+    public string Source;
+    /// <summary>
+    /// New Variable Name
+    /// </summary>
+    public string Target;   
+}

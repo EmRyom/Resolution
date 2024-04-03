@@ -61,45 +61,7 @@
         }
         @if (_renamePrompt)
         {
-            <div class="overlay">
-                <div class="selector">
-                    <div style="padding: 10px">
-                        <div>
-                            <di style="text-align: left">
-                                What variable should be renamed?
-                            </di>
-                            <di style="text-align: right">
-                                <button class="proofButton" @onclick="(e => _renamePrompt = !_renamePrompt)">✖</button>
-                            </di>
-                        </div>
-                        <vertic style="padding-bottom: 10px;">
-                            @foreach (var variable in _proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int) _renameOriginal)))
-                            {
-                                <variables>
-                                    <variable @onclick="e => _renameSource = variable"
-                                            style="@($"outline: {(_renameSource != null && _renameSource == variable ? "2px dashed orange" : "1px solid gray")}")">
-                                        @((MarkupString)new Variable(variable).Print())
-                                    </variable>
-                                </variables>
-                            }
-                        </vertic>
-                        <EditForm style="padding-bottom: 10px;" Model="@_resolutionFlow" OnSubmit="@RenameEnd">
-                            <InputText @bind-Value="_renameTarget" @oninput="e => StateHasChanged()"/> 
-                            <di style="text-align: right">
-                                @if (_renameTarget != null && Regex.IsMatch(_renameTarget, @"^[a-z]+[0-9]*$"))
-                                {
-                                    <button style="color:green" type="submit">Rename</button>
-                                }
-                                else
-                                {
-                                    <button style="color:red" type="button">Rename</button>
-                                }
-                            </di>
-                        </EditForm>
-
-                    </div>
-                </div>
-            </div>
+            <ResolutionOnline.Components.RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameOriginal))) CancelRenaming="RenameCancel" RenameEnd="e => RenameEnd(e.Source, e.Target)"/>
         }
         <table style="margin: auto; text-align:left;">
             <tbody>
@@ -252,8 +214,6 @@ else
     /// <summary>
     /// 
     /// </summary>
-    string? _renameSource;
-    string? _renameTarget;
     int? _renameOriginal;
 
     private void ResolveEnd()
@@ -351,11 +311,14 @@ else
 
     private void Delete(int index) { _resolutionFlow.proof.DeleteApplication(index); StateHasChanged(); }
 
-    private void RenameEnd()
+    /// <summary>
+    /// Invoked to finish a renaming step. The source is renamed to the target
+    /// </summary>
+    /// <param name="source"></param>
+    /// <param name="target"></param>
+    void RenameEnd(string source, string target)
     {
-        _resolutionFlow.proof.Applications.Add(_proofTools.RenameVariable(_renameSource, _renameTarget, (int)_renameOriginal, _resolutionFlow.proof.GetClause((int)_renameOriginal)));
-        _renameSource = null;
-        _renameTarget = null;
+        _resolutionFlow.proof.Applications.Add(_proofTools.RenameVariable(source, target, (int)_renameOriginal, _resolutionFlow.proof.GetClause((int)_renameOriginal)));
         _renameOriginal = null;
         _renamePrompt = false;
         StateHasChanged();
@@ -365,6 +328,13 @@ else
     {
         _renameOriginal = i;
         _renamePrompt = true;
+        StateHasChanged();
+    }
+
+    private void RenameCancel()
+    {
+        _renameOriginal = null;
+        _renamePrompt = false;
         StateHasChanged();
     }
 

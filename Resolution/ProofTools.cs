@@ -358,6 +358,11 @@ public class ProofTools
         return false;
     }
 
+    /// <summary>
+    /// Gets a set of all variables in a clause
+    /// </summary>
+    /// <param name="clause"></param>
+    /// <returns></returns>
     public HashSet<string> ClauseVariables(ClausalForm.Clause clause)
     {
         return clause.Literals.SelectMany(atom => atom.Args.SelectMany(ArgumentVariables)).ToHashSet();
