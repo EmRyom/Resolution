@@ -61,7 +61,7 @@
         }
         @if (_renamePrompt)
         {
-            <ResolutionOnline.Components.RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameOriginal))) CancelRenaming="RenameCancel" RenameEnd="e => RenameEnd(e.Source, e.Target)"/>
+            <ResolutionOnline.Components.RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameOriginal))) CancelRenaming="RenameStop" RenameEnd="e => RenameEnd(e.Source, e.Target)"/>
         }
         <table style="margin: auto; text-align:left;">
             <tbody>
@@ -131,6 +131,7 @@
             </tbody>
         </table>
 
+        @* If the proof contians the empty clause, it is considered finished and the proof can be copied to the clipboard. *@
         @if (_resolutionFlow.proof.Applications.Any(x => _proofTools.IsEmptyClause(x.GetClause())))
         {
             <button @onclick="e => CopyProof()">Copy verifiable proof to clipboard</button>
@@ -199,13 +200,13 @@ else
     List<ProofTools.ResolveError> _errors = new();
 
     /// <summary>
-    /// Indications how many error messages are currently displayed
+    /// Indicates how many error messages are currently displayed
     /// </summary>
-    int _toDeleteErrors; // Indications how many error messages are currently displayed.
+    int _toDeleteErrors; 
     /// <summary>
     /// Indicates whether the choice prompt window should be shown.
     /// </summary>
-    bool _choicePrompt; // 
+    bool _choicePrompt; 
 
     /// <summary>
     /// Indicates whether the rename prompt window should be shown
@@ -312,18 +313,24 @@ else
     private void Delete(int index) { _resolutionFlow.proof.DeleteApplication(index); StateHasChanged(); }
 
     /// <summary>
-    /// Invoked to finish a renaming step. The source is renamed to the target
+    /// Invoked to finish a renaming step. Calculates the new clause where the varaible is renamed to the target name. 
+    /// Adds the renaming step to the proof.
     /// </summary>
     /// <param name="source"></param>
     /// <param name="target"></param>
-    void RenameEnd(string source, string target)
+    private void RenameEnd(string source, string target)
     {
-        _resolutionFlow.proof.Applications.Add(_proofTools.RenameVariable(source, target, (int)_renameOriginal, _resolutionFlow.proof.GetClause((int)_renameOriginal)));
-        _renameOriginal = null;
-        _renamePrompt = false;
-        StateHasChanged();
+        var clauseUsedForRenaming = _resolutionFlow.proof.GetClause((int)_renameOriginal);
+        var rename = _proofTools.RenameVariable(source, target, (int)_renameOriginal, clauseUsedForRenaming);
+        _resolutionFlow.proof.Applications.Add(rename);
+
+        RenameStop();
     }
 
+    /// <summary>
+    /// Starts the process of renaming a variable. Opens the prompt.
+    /// </summary>
+    /// <param name="i"></param>
     private void RenameStart(int i)
     {
         _renameOriginal = i;
@@ -331,13 +338,19 @@ else
         StateHasChanged();
     }
 
-    private void RenameCancel()
+    /// <summary>
+    /// Cancel the renaming process of a variable. Close the prompt.
+    /// </summary>
+    private void RenameStop()
     {
         _renameOriginal = null;
         _renamePrompt = false;
         StateHasChanged();
     }
 
+    /// <summary>
+    /// DISABLED Summons the Isabelle proof generator to generate the formally verifiable proof, then copies to the clipboard.
+    /// </summary>
     private void CopyProof()
     {
         // var c = new Isabelle.AST.ProofConnector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
