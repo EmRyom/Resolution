@@ -23,7 +23,7 @@
                     </variables>
                 }
             </vertic>
-            <EditForm style="padding-bottom: 10px;" OnSubmit="e => RenameEnd.InvokeAsync(this)" Model="@this">
+            <EditForm style="padding-bottom: 10px;" OnSubmit="e => Rename.InvokeAsync(this)" Model="@this">
                 <InputText @bind-Value="@Target" @oninput="e => StateHasChanged()"/>
                 <di style="text-align: right">
                     @if (Target != null && Regex.IsMatch(Target, @"^[a-z]+[0-9]*$"))
@@ -41,12 +41,21 @@
 </div>
 
 @code {
+    /// <summary>
+    /// List of variables in the clause that is having a variable renamed
+    /// </summary>
     [Parameter]
     public HashSet<string> variablesInClause { get; set; }
 
+    /// <summary>
+    /// Completes the process of renaming a variable in the proof.
+    /// </summary>
     [Parameter]
-    public EventCallback<RenameVariablePrompt> RenameEnd { get; set; }
+    public EventCallback<RenameVariablePrompt> Rename { get; set; }
 
+    /// <summary>
+    /// Cancels the process of renaming a variable in the proof.
+    /// </summary>
     [Parameter]
     public EventCallback CancelRenaming { get; set; }
 
@@ -54,6 +63,7 @@
     /// Original Variable Name
     /// </summary>
     public string Source;
+
     /// <summary>
     /// New Variable Name
     /// </summary>

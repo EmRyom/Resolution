@@ -107,8 +107,6 @@ namespace Resolution
                 } 
             }
         }
-
-        
     }
 
     public interface IApplication

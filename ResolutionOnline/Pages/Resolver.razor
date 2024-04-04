@@ -6,7 +6,7 @@
 @inject ResolutionFlowContainer ResolutionFlowContainer
 @using BlazorAnimate
 @inject Clipboard.IClipboardService ClipboardService
-
+@using ResolutionOnline.Components;
 @using static Resolution.ClausalForm;
 
 <h3>Resolver</h3>
@@ -16,52 +16,11 @@
     <div style="margin: auto; width:100%; text-align:center;">
         @if (_choicePrompt)
         {
-            if (_literals1 != null && _literals2 != null)
-            {
-                ResolveEndWithAtoms();
-            }
-
-            <div class="overlay" >
-                <div class="selector">
-                @if (_selection != null )
-                    {
-                        <div style="padding: 10px">
-                            <div>
-                                <di style="text-align: left">
-                                    These clauses clash on multiple literals
-                                </di>
-                                <di style="text-align: right">
-                                    <button class="proofButton" @onclick="(e => _choicePrompt = !_choicePrompt)">✖</button>
-                                </di>
-                            </div>
-                            Select the two literals to resolve on
-                            <vertic>
-                                @foreach (var literal in _resolutionFlow.proof.GetClause(_selection.Item1).Literals)
-                                {
-                                    <fol @onclick="e => SetFirstAtom(literal)"
-                                         style="@($"outline: {(_literals1.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
-                                        @((MarkupString)literal.Print())
-                                    </fol>
-                                }
-                            </vertic>
-                            <vertic>
-                                @foreach (var literal in _resolutionFlow.proof.GetClause(_selection.Item2).Literals)
-                                {
-
-                                    <fol @onclick="e => SetSecondAtom(literal)"
-                                         style="@($"outline: {(_literals2.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
-                                        @((MarkupString)literal.Print())
-                                    </fol>
-                                }
-                            </vertic>
-                        </div>
-                    }
-                </div>
-            </div>
+            <LiteralSelector LeftLiterals=@_resolutionFlow.proof.GetClause(_resolveSource).Literals RightLiterals=@_resolutionFlow.proof.GetClause(_resolveTarget).Literals  CancelResolution="ResetResolve" Resolve="ResolveEnd"/>
         }
         @if (_renamePrompt)
         {
-            <ResolutionOnline.Components.RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameOriginal))) CancelRenaming="RenameStop" RenameEnd="e => RenameEnd(e.Source, e.Target)"/>
+            <RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameOriginal))) CancelRenaming="RenameStop" Rename="e => RenameEnd(e.Source, e.Target)"/>
         }
         <table style="margin: auto; text-align:left;">
             <tbody>
@@ -83,7 +42,7 @@
                                     style="@($"outline: {(_resolveTarget == i && _resolveTarget != _resolveSource ? "2px dashed orange" : _proofTools.IsEmptyClause(_resolutionFlow.proof.GetClause(i)) ? "1px solid white; background-color: green; color: white" : "1px solid gray")}")"
                                     @ondragenter="e => SetResolveTarget(i)"
                                     @ondragstart="e => SetResolveSource(i)"
-                                    @ondrop="e => ResolveEnd()">
+                                    @ondrop="e => StartLiteralSelector()">
                                 <div style="text-align: center;">
                                     @((MarkupString)_resolutionFlow.proof.GetClause(i).Print())
                                 </div>
@@ -179,23 +138,19 @@ else
         _resolutionFlow = ResolutionFlowContainer.Value;
     }
 
-
     /// <summary>
     /// 1st clause that is being resolved on.
     /// </summary>
-    int? _resolveSource; 
+    int _resolveSource = 0;
+
     /// <summary>
     /// 2nd clause that is being resolved on.
     /// </summary>
-    int? _resolveTarget; 
-
-    HashSet<Literal> _literals1 = new HashSet<Literal>() { };
-    HashSet<Literal> _literals2 = new HashSet<Literal>() { };
+    int _resolveTarget = 0; 
 
     /// <summary>
     /// The two clauses that are selected for resolution.
     /// </summary>
-    Tuple<int, int>? _selection;
 
     List<ProofTools.ResolveError> _errors = new();
 
@@ -203,6 +158,7 @@ else
     /// Indicates how many error messages are currently displayed
     /// </summary>
     int _toDeleteErrors; 
+
     /// <summary>
     /// Indicates whether the choice prompt window should be shown.
     /// </summary>
@@ -217,72 +173,112 @@ else
     /// </summary>
     int? _renameOriginal;
 
-    private void ResolveEnd()
-    {
-        Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource}");
-        if (_resolveSource == null || _resolveTarget == null)
-        {
-            Console.WriteLine($"Error {_resolveSource}");
-            return;
-        }
-        if (_resolveSource != _resolveTarget)
-        {
-            var result = _proofTools.Resolve(
-                (int) _resolveSource,
-                (int) _resolveTarget,
-                _resolutionFlow?.proof.GetClause((int)_resolveSource),
-                _resolutionFlow?.proof.GetClause((int)_resolveTarget));
-            if (result.IsLeft)
-            {
-                _resolutionFlow?.proof.Applications.Add(result.AsLeft);
-            }
-            if (result.IsMiddle)
-            {
-                _choicePrompt = true;
-                _selection = new Tuple<int, int>((int)_resolveSource, (int)_resolveTarget);
-                StateHasChanged();
-                return;
-            }
-            if (result.IsRight)
-            {
-                _errors.Add(result.AsRight);
 
-                Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.AsRight)} ");
-            }
-        }
-        _resolveSource = null;
-        _resolveTarget = null;
+    private void StartLiteralSelector()
+    {
+        _choicePrompt = true;
         StateHasChanged();
     }
 
-    private void ResolveEndWithAtoms()
+    // TBD.
+    //private void ResolveEnd()
+    //{
+    //    Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource}");
+    //    if (_resolveSource == null || _resolveTarget == null)
+    //    {
+    //        Console.WriteLine($"Error {_resolveSource}");
+    //        return;
+    //    }
+    //    if (_resolveSource != _resolveTarget)
+    //    {
+    //        var result = _proofTools.Resolve(
+    //            (int) _resolveSource,
+    //            (int) _resolveTarget,
+    //            _resolutionFlow?.proof.GetClause((int)_resolveSource),
+    //            _resolutionFlow?.proof.GetClause((int)_resolveTarget));
+    //        if (result.IsLeft)
+    //        {
+    //            _resolutionFlow?.proof.Applications.Add(result.AsLeft);
+    //        }
+    //        if (result.IsMiddle)
+    //        {
+    //            _choicePrompt = true;
+    //            _selection = new Tuple<int, int>((int)_resolveSource, (int)_resolveTarget);
+    //            StateHasChanged();
+    //            return;
+    //        }
+    //        if (result.IsRight)
+    //        {
+    //            _errors.Add(result.AsRight);
+
+    //            Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.AsRight)} ");
+    //        }
+    //    }
+    //    _resolveSource = null;
+    //    _resolveTarget = null;
+    //    StateHasChanged();
+    //}
+
+    // TBD
+    //private void ResolveEndWithAtoms()
+    //{
+    //    Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource} and {_proofTools.Print(_literals1)} {_proofTools.Print(_literals2)}");
+    //    var result = _proofTools.Resolve(
+    //        (int)_resolveSource,
+    //        (int)_resolveTarget,
+    //        _resolutionFlow?.proof.GetClause((int)_resolveSource),
+    //        _resolutionFlow?.proof.GetClause((int)_resolveTarget),
+    //        _literals1,
+    //        _literals2);
+    //    if (result.IsSuccesful)
+    //    {
+    //        _resolutionFlow?.proof.Applications.Add(result.Resolve);
+    //    }
+    //    else 
+    //    {
+    //        _errors.Add(result.Error);
+    //        Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.Error)} ");
+    //    }
+
+    //    // Reset the proof step values to their original state, where nothing has been chosen yet.
+    //    _resolveSource = null;
+    //    _resolveTarget = null;
+    //    _literals1 = new HashSet<Literal> {};
+    //    _literals2 = new HashSet<Literal> {};
+    //    _choicePrompt = false;
+    //    StateHasChanged();
+    //}
+
+
+    /// <summary>
+    /// Resolving function
+    /// </summary>
+    private void ResolveEnd(LiteralSelector selector)
     {
-        Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource} and {_proofTools.Print(_literals1)} {_proofTools.Print(_literals2)}");
+        Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource}");
+        var leftClause = _resolutionFlow?.proof.GetClause((int)_resolveSource);
+        var rightClause = _resolutionFlow?.proof.GetClause((int)_resolveTarget);
+
         var result = _proofTools.Resolve(
             (int)_resolveSource,
             (int)_resolveTarget,
-            _resolutionFlow?.proof.GetClause((int)_resolveSource),
-            _resolutionFlow?.proof.GetClause((int)_resolveTarget),
-            _literals1,
-            _literals2);
+            leftClause,
+            rightClause,
+            selector.LeftSelectedLiterals,
+            selector.RightSelectedLiterals
+        );
+
         if (result.IsSuccesful)
         {
             _resolutionFlow?.proof.Applications.Add(result.Resolve);
         }
-        else 
+        else
         {
             _errors.Add(result.Error);
             Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.Error)} ");
         }
 
-        // Reset the proof step values to their original state, where nothing has been chosen yet.
-        _resolveSource = null;
-        _resolveTarget = null;
-        _literals1 = new HashSet<Literal> {};
-        _literals2 = new HashSet<Literal> {};
-        _choicePrompt = false;
-        StateHasChanged();
-
+        ResetResolve();
     }
 
     private async void DeleteError()
@@ -295,7 +291,11 @@ else
         StateHasChanged();
     }
 
-    private void SetResolveSource(int index) { _resolveSource = index; StateHasChanged(); }
+    private void SetResolveSource(int index) 
+    { 
+        _resolveSource = index; 
+        StateHasChanged(); 
+    }
 
     private void SetResolveTarget(int index)
     {
@@ -304,12 +304,22 @@ else
         StateHasChanged();
     } 
 
-    private void ResetResolve() { _resolveSource = null; StateHasChanged(); _resolveTarget = null; StateHasChanged(); }
 
-    private void SetFirstAtom(Literal literal) { _literals1.Add(literal); StateHasChanged(); }
+    /// <summary>
+    /// Resets the resolutions relevant stuff to zero.
+    /// </summary>
+    private void ResetResolve() 
+    { 
+        _resolveSource = 0; 
+        _resolveTarget = 0; 
+        _choicePrompt = false;
+        StateHasChanged(); 
+    }
 
-    private void SetSecondAtom(Literal literal) { _literals2.Add(literal); StateHasChanged(); }
-
+    /// <summary>
+    /// Delete a step from the proof.
+    /// </summary>
+    /// <param name="index"></param>
     private void Delete(int index) { _resolutionFlow.proof.DeleteApplication(index); StateHasChanged(); }
 
     /// <summary>

@@ -1,0 +1,75 @@
+﻿@using System.Text.RegularExpressions;
+@using static Resolution.ClausalForm;
+
+<div class="overlay">
+    <div class="selector">
+        <div style="padding: 10px">
+            <div>
+                <di style="text-align: left">
+                    These clauses clash on multiple literals
+                </di>
+                <di style="text-align: right">
+                    <button class="proofButton" @onclick=CancelResolution>✖</button>
+                </di>
+            </div>
+            Select the two literals to resolve on
+            <vertic>
+                @foreach (var literal in LeftLiterals)
+                {
+                    <fol @onclick="e => AlterLiteralSelection(LeftSelectedLiterals, literal)"
+                         style="@($"outline: {(LeftSelectedLiterals.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
+                        @((MarkupString)literal.Print())
+                    </fol>
+                }
+            </vertic>
+            <vertic>
+                @foreach (var literal in RightLiterals)
+                {
+                    <fol @onclick="e => AlterLiteralSelection(RightSelectedLiterals, literal)"
+                         style="@($"outline: {(RightSelectedLiterals.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
+                        @((MarkupString)literal.Print())
+                    </fol>
+                }
+            </vertic>
+            <vertic>
+                @if (LeftSelectedLiterals.Count != 0 && RightSelectedLiterals.Count != 0)
+                {
+                    <button class="proofButton" @onclick=@(e => Resolve.InvokeAsync(this))>Resolve</button>
+                }
+            </vertic>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<Literal> LeftLiterals { get; set; }
+
+    [Parameter]
+    public List<Literal> RightLiterals { get; set; }
+
+    [Parameter]
+    public EventCallback CancelResolution { get; set; }
+
+    [Parameter]
+    public EventCallback<LiteralSelector> Resolve { get; set; }
+
+    public HashSet<Literal> LeftSelectedLiterals = new HashSet<Literal> { };
+
+    public HashSet<Literal> RightSelectedLiterals = new HashSet<Literal> { };
+
+    /// <summary>
+    /// Adds a literal to the specified set of selected literals. If the literal already exists there, it gets removed.
+    /// </summary>
+    public void AlterLiteralSelection(HashSet<Literal> selectedLiterals, Literal alteringLiteral)
+    {
+        if (selectedLiterals.Contains(alteringLiteral))
+        {
+            selectedLiterals.Remove(alteringLiteral);
+        }
+        else
+        {
+            selectedLiterals.Add(alteringLiteral);
+        }
+    }
+}
