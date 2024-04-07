@@ -1,26 +1,24 @@
 ﻿@page "/resolver"
 @using ResolutionOnline.Data
 @using Resolution
-@using System.Text.RegularExpressions
 @inject NavigationManager NavigationManager
 @inject ResolutionFlowContainer ResolutionFlowContainer
 @using BlazorAnimate
 @inject Clipboard.IClipboardService ClipboardService
 @using ResolutionOnline.Components;
-@using static Resolution.ClausalForm;
 
 <h3>Resolver</h3>
 
 @if (_resolutionFlow != null)
 {
     <div style="margin: auto; width:100%; text-align:center;">
-        @if (_choicePrompt)
+        @if (_literalSelectorActive)
         {
             <LiteralSelector LeftLiterals=@_resolutionFlow.proof.GetClause(_resolveSource).Literals RightLiterals=@_resolutionFlow.proof.GetClause(_resolveTarget).Literals  CancelResolution="ResetResolve" Resolve="ResolveEnd"/>
         }
-        @if (_renamePrompt)
+        @if (_renameClause != 0)
         {
-            <RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameOriginal))) CancelRenaming="RenameStop" Rename="e => RenameEnd(e.Source, e.Target)"/>
+            <RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameClause))) CancelRenaming="RenameStop" Rename="e => RenameEnd(e.Source, e.Target)" />
         }
         <table style="margin: auto; text-align:left;">
             <tbody>
@@ -28,6 +26,7 @@
             {
                 var i = 1 + index;
                 <tr>
+                    @* Display clause number *@
                     <td style="color: black">
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             <math>
@@ -35,6 +34,7 @@
                             </math>
                         </Animate>
                     </td>
+                    @* Display clause *@
                     <td>
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             <clause draggable="true"
@@ -42,18 +42,20 @@
                                     style="@($"outline: {(_resolveTarget == i && _resolveTarget != _resolveSource ? "2px dashed orange" : _proofTools.IsEmptyClause(_resolutionFlow.proof.GetClause(i)) ? "1px solid white; background-color: green; color: white" : "1px solid gray")}")"
                                     @ondragenter="e => SetResolveTarget(i)"
                                     @ondragstart="e => SetResolveSource(i)"
-                                    @ondrop="e => StartLiteralSelector()">
+                                    @ondrop="e => StartResolution()">
                                 <div style="text-align: center;">
                                     @((MarkupString)_resolutionFlow.proof.GetClause(i).Print())
                                 </div>
                             </clause>
                         </Animate>
                     </td>
+                    @* Display clause obtaining operation *@
                     <td style="text-align: left; color: black">
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             @((MarkupString)("<i>, " + _resolutionFlow.proof.Applications[i - 1].PrintMethod()))
                         </Animate>
                     </td>
+                    @* Add 'rename' button to every clause with a variable *@
                     @if (_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause(i)).Count > 0)
                     {
                         <td style="width=38px">
@@ -67,6 +69,7 @@
                         <td style="width=38px">
                         </td>
                     }
+                    @* Add 'delete' button to every applicaiton that permits it *@
                     @if (!_resolutionFlow.proof.MustKeepApplication(i))
                     {
                         <td style="width=38px">
@@ -80,6 +83,7 @@
                         <td style="width=38px">
                         </td>
                     }
+                    @* Display substitutions relevant to clause *@
                     <td style="text-align: left; color: black">
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             @((MarkupString)(_resolutionFlow.proof.Applications[i - 1].PrintSubstitutions()))
@@ -96,6 +100,7 @@
             <button @onclick="e => CopyProof()">Copy verifiable proof to clipboard</button>
         }
 
+        @* Error messages *@
         <div style="height: 30px; padding-bottom : 50px;">
             @for (int ei = 0; ei < _errors.Count; ei++)
             {
@@ -141,114 +146,40 @@ else
     /// <summary>
     /// 1st clause that is being resolved on.
     /// </summary>
-    int _resolveSource = 0;
-
+    int _resolveSource;
     /// <summary>
     /// 2nd clause that is being resolved on.
     /// </summary>
-    int _resolveTarget = 0; 
+    int _resolveTarget; 
 
     /// <summary>
-    /// The two clauses that are selected for resolution.
+    /// List of errors currently displayed
     /// </summary>
-
     List<ProofTools.ResolveError> _errors = new();
-
     /// <summary>
     /// Indicates how many error messages are currently displayed
     /// </summary>
     int _toDeleteErrors; 
 
+
+    // Front end triggers
     /// <summary>
     /// Indicates whether the choice prompt window should be shown.
     /// </summary>
-    bool _choicePrompt; 
+    bool _literalSelectorActive; 
+    /// <summary>
+    /// The clause that needs to have a variable renamed. 0 if not active.
+    /// </summary>
+    int _renameClause;
 
     /// <summary>
-    /// Indicates whether the rename prompt window should be shown
+    /// To initiate resolution, start the literal selector.
     /// </summary>
-    bool _renamePrompt; 
-    /// <summary>
-    /// 
-    /// </summary>
-    int? _renameOriginal;
-
-
-    private void StartLiteralSelector()
+    private void StartResolution()
     {
-        _choicePrompt = true;
+        _literalSelectorActive = true;
         StateHasChanged();
     }
-
-    // TBD.
-    //private void ResolveEnd()
-    //{
-    //    Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource}");
-    //    if (_resolveSource == null || _resolveTarget == null)
-    //    {
-    //        Console.WriteLine($"Error {_resolveSource}");
-    //        return;
-    //    }
-    //    if (_resolveSource != _resolveTarget)
-    //    {
-    //        var result = _proofTools.Resolve(
-    //            (int) _resolveSource,
-    //            (int) _resolveTarget,
-    //            _resolutionFlow?.proof.GetClause((int)_resolveSource),
-    //            _resolutionFlow?.proof.GetClause((int)_resolveTarget));
-    //        if (result.IsLeft)
-    //        {
-    //            _resolutionFlow?.proof.Applications.Add(result.AsLeft);
-    //        }
-    //        if (result.IsMiddle)
-    //        {
-    //            _choicePrompt = true;
-    //            _selection = new Tuple<int, int>((int)_resolveSource, (int)_resolveTarget);
-    //            StateHasChanged();
-    //            return;
-    //        }
-    //        if (result.IsRight)
-    //        {
-    //            _errors.Add(result.AsRight);
-
-    //            Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.AsRight)} ");
-    //        }
-    //    }
-    //    _resolveSource = null;
-    //    _resolveTarget = null;
-    //    StateHasChanged();
-    //}
-
-    // TBD
-    //private void ResolveEndWithAtoms()
-    //{
-    //    Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource} and {_proofTools.Print(_literals1)} {_proofTools.Print(_literals2)}");
-    //    var result = _proofTools.Resolve(
-    //        (int)_resolveSource,
-    //        (int)_resolveTarget,
-    //        _resolutionFlow?.proof.GetClause((int)_resolveSource),
-    //        _resolutionFlow?.proof.GetClause((int)_resolveTarget),
-    //        _literals1,
-    //        _literals2);
-    //    if (result.IsSuccesful)
-    //    {
-    //        _resolutionFlow?.proof.Applications.Add(result.Resolve);
-    //    }
-    //    else 
-    //    {
-    //        _errors.Add(result.Error);
-    //        Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.Error)} ");
-    //    }
-
-    //    // Reset the proof step values to their original state, where nothing has been chosen yet.
-    //    _resolveSource = null;
-    //    _resolveTarget = null;
-    //    _literals1 = new HashSet<Literal> {};
-    //    _literals2 = new HashSet<Literal> {};
-    //    _choicePrompt = false;
-    //    StateHasChanged();
-    //}
-
 
     /// <summary>
     /// Resolving function
@@ -256,12 +187,12 @@ else
     private void ResolveEnd(LiteralSelector selector)
     {
         Console.WriteLine($"ResolveEnd with {_resolveTarget} {_resolveSource}");
-        var leftClause = _resolutionFlow?.proof.GetClause((int)_resolveSource);
-        var rightClause = _resolutionFlow?.proof.GetClause((int)_resolveTarget);
+        var leftClause = _resolutionFlow?.proof.GetClause(_resolveSource);
+        var rightClause = _resolutionFlow?.proof.GetClause(_resolveTarget);
 
         var result = _proofTools.Resolve(
-            (int)_resolveSource,
-            (int)_resolveTarget,
+            _resolveSource,
+            _resolveTarget,
             leftClause,
             rightClause,
             selector.LeftSelectedLiterals,
@@ -281,6 +212,9 @@ else
         ResetResolve();
     }
 
+    /// <summary>
+    /// Automatically deletes an error as it is being shown
+    /// </summary>
     private async void DeleteError()
     {
         _toDeleteErrors++;
@@ -291,15 +225,23 @@ else
         StateHasChanged();
     }
 
+    /// <summary>
+    /// When clicking an dragging a clause, set that clause as the source
+    /// </summary>
+    /// <param name="index"></param>
     private void SetResolveSource(int index) 
     { 
         _resolveSource = index; 
         StateHasChanged(); 
     }
 
+    /// <summary>
+    /// When dragging into a clause, set that clause as the target
+    /// </summary>
+    /// <param name="index"></param>
     private void SetResolveTarget(int index)
     {
-        if (_resolveSource == null) return;
+        if (_resolveSource == 0) return;
         _resolveTarget = index; 
         StateHasChanged();
     } 
@@ -312,7 +254,7 @@ else
     { 
         _resolveSource = 0; 
         _resolveTarget = 0; 
-        _choicePrompt = false;
+        _literalSelectorActive = false;
         StateHasChanged(); 
     }
 
@@ -330,8 +272,8 @@ else
     /// <param name="target"></param>
     private void RenameEnd(string source, string target)
     {
-        var clauseUsedForRenaming = _resolutionFlow.proof.GetClause((int)_renameOriginal);
-        var rename = _proofTools.RenameVariable(source, target, (int)_renameOriginal, clauseUsedForRenaming);
+        var clauseUsedForRenaming = _resolutionFlow.proof.GetClause(_renameClause);
+        var rename = _proofTools.RenameVariable(source, target, _renameClause, clauseUsedForRenaming);
         _resolutionFlow.proof.Applications.Add(rename);
 
         RenameStop();
@@ -343,8 +285,7 @@ else
     /// <param name="i"></param>
     private void RenameStart(int i)
     {
-        _renameOriginal = i;
-        _renamePrompt = true;
+        _renameClause = i;
         StateHasChanged();
     }
 
@@ -353,8 +294,7 @@ else
     /// </summary>
     private void RenameStop()
     {
-        _renameOriginal = null;
-        _renamePrompt = false;
+        _renameClause = 0;
         StateHasChanged();
     }
 
