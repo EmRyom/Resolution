@@ -142,7 +142,7 @@ public class Parser
         _current = s;
         if (_debugMode)
         {
-            Console.WriteLine("Args ->" + s);
+            Console.WriteLine("Arguments ->" + s);
         }
         List<GeneralForm.IArgument> list = new List<GeneralForm.IArgument>();
         
