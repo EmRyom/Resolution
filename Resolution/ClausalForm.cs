@@ -68,29 +68,29 @@ public class ClausalForm
     public class Literal
     {
         public string Identifier { get; }
-        public bool Value { get; }
-        public List<IArgument> Args { get; }
+        public bool Sign { get; }
+        public List<IArgument> Arguments { get; }
 
-        public Literal(string identifier, bool value, List<IArgument> args)
+        public Literal(string identifier, bool sign, List<IArgument> arguments)
         {
             Identifier = identifier;
-            Value = value;
-            Args = args;
+            Sign = sign;
+            Arguments = arguments;
         }
 
         public string Print()
         {
-            var s = (Value ? "" : "¬ ") + Identifier;
-            switch (Args.Count)
+            var s = (Sign ? "" : "¬ ") + Identifier;
+            switch (Arguments.Count)
             {
                 case 0:
                     return s;
                 case 1:
-                    s += "(" + Args.First().Print() + ")";
+                    s += "(" + Arguments.First().Print() + ")";
                     return s;
                 default:
-                    s += "(" + Args.First().Print();
-                    foreach (IArgument arg in Args.Skip(1))
+                    s += "(" + Arguments.First().Print();
+                    foreach (IArgument arg in Arguments.Skip(1))
                     {
                         s += ", " + arg.Print();
                     }
@@ -101,11 +101,10 @@ public class ClausalForm
 
         public Literal Clone()
         {
-            var arguments = Args.Select(argument => argument.Clone()).ToList();
-            return new Literal(Identifier, Value, arguments);
+            var arguments = Arguments.Select(argument => argument.Clone()).ToList();
+            return new Literal(Identifier, Sign, arguments);
         }
     }
-
     public interface IArgument
     {
         public string Print();
@@ -128,27 +127,27 @@ public class ClausalForm
     public class Function : IArgument
     {
         public string identifier;
-        public List<IArgument> args;
+        public List<IArgument> arguments;
 
-        public Function(string identifier, List<IArgument> args)
+        public Function(string identifier, List<IArgument> arguments)
         {
             this.identifier = identifier;
-            this.args = args;
+            this.arguments = arguments;
         }
 
         public string Print()
         {
             var s = identifier;
-            switch (args.Count)
+            switch (arguments.Count)
             {
                 case 0:
                     return s;
                 case 1:
-                    s += "[" + args.First().Print() + "]";
+                    s += "[" + arguments.First().Print() + "]";
                     return s;
                 default:
-                    s += "[" + args.First().Print();
-                    foreach (IArgument arg in args.Skip(1))
+                    s += "[" + arguments.First().Print();
+                    foreach (IArgument arg in arguments.Skip(1))
                     {
                         s += ", " + arg.Print();
                     }
@@ -159,7 +158,7 @@ public class ClausalForm
 
         public IArgument Clone()
         {
-            var arguments = args.Select(arg => arg.Clone()).ToList();
+            var arguments = this.arguments.Select(arg => arg.Clone()).ToList();
             return new Function(identifier, arguments);
         }
     }

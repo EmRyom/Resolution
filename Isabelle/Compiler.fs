@@ -7,7 +7,7 @@ open AST
 module Compiler =
     
     let rec compileFunction (f:ClausalForm.Function):Argument =
-        Fun(f.identifier.Replace("'","_m"), f.args |> List.ofSeq |> List.map compileArg)
+        Fun(f.identifier.Replace("'","_m"), f.arguments |> List.ofSeq |> List.map compileArg)
 
     and compileArg (a:ClausalForm.IArgument):Argument = 
         match string <| a.GetType() with
@@ -20,8 +20,8 @@ module Compiler =
         | b -> failwith  <| "Type was " + b
 
     let compileLiteral (a:ClausalForm.Literal):Literal= 
-        let args = List.map compileArg <| List.ofSeq a.Args
-        (a.Identifier, args, a.Value)
+        let args = List.map compileArg <| List.ofSeq a.Arguments
+        (a.Identifier, args, a.Sign)
 
     let compileClause (c:ClausalForm.Clause):Clause =
         c.Literals |> List.ofSeq |> List.map compileLiteral |> Set.ofList
