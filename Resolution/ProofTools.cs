@@ -122,7 +122,7 @@ public class ProofTools
 
         if (functions.TryGetValue(v.identifier, out var compare))
         {
-            if (!Eq(compare, f, true))
+            if (Eq(compare, f) == false)
             {
                 {
                     return new ResolveError($"Multiple different substitutions for variable {v.identifier}", Error.InconsistentSubstitutions);
@@ -167,7 +167,7 @@ public class ProofTools
         // Check that the substitutions are consistent
         if (functions.TryGetValue(v1.identifier, out var compare1) && functions.TryGetValue(v2.identifier, out var compare2))
         {
-            if (!Eq(compare1, compare2, true))
+            if (Eq(compare1, compare2) == false)
             {
                 return new ResolveError($"Multiple different substitutions for variable {v2.Print()}", Error.InconsistentSubstitutions);
             }
@@ -381,7 +381,7 @@ public class ProofTools
         List<Literal>? substituted1 = null;
         List<Literal>? substituted2 = atoms.ToList();
 
-        while (substituted1 == null || !Eq(new Clause(substituted1), new Clause(substituted2),true))
+        while (substituted1 == null || !Eq(new Clause(substituted1), new Clause(substituted2)))
         {
             substituted1 = substituted2.ToList();
             substituted2 = substituted1.Select(atom =>
@@ -413,6 +413,7 @@ public class ProofTools
         return newArgument;
     }
 
+    // TODO This is what needs most rework, maybe check the thesis to see what said about it back then :)
     public Clause ApplyFactoring(Clause clause)
     {
         if (_debugMode)
@@ -424,7 +425,7 @@ public class ProofTools
         {
             for (int j = i + 1; j < atoms.Count; j++)
             {
-                if (Eq(atoms[i], atoms[j], false))
+                if (Eq(atoms[i], atoms[j]))
                 {
                     // Check if a variable involved factoring is mentioned anywhere else, as that might affect the soundness. 
                     if (!atoms[i].Arguments.SelectMany(ArgumentVariables)
@@ -596,15 +597,14 @@ public class ProofTools
         return new Rename(origin, new Clause(subbed), oldName, newName);
     }
 
-    // checks if arguments are equivalent, or identical
-    // Needs a major rework as the identical variable check is deeply flawed. basically there's no check of consistency in substitutions between variables.
-    public bool Eq(IArgument one, IArgument two, bool identical)
+    // checks if arguments are identical
+    public bool Eq(IArgument one, IArgument two)
     {
         if (one.GetType() == typeof(Variable) && two.GetType() == typeof(Variable))
         {
             var typedOne = (Variable)one;
             var typedTwo = (Variable)two;
-            return typedOne.identifier == typedTwo.identifier || !identical;
+            return typedOne.identifier == typedTwo.identifier;
         }
 
         if (one.GetType() == typeof(Function) && two.GetType() == typeof(Function))
@@ -619,7 +619,7 @@ public class ProofTools
             var condition = true;
             foreach (var iteration in iterator)
             {
-                condition = condition && Eq(iteration.Left, iteration.Right, identical);
+                condition = condition && Eq(iteration.Left, iteration.Right);
             }
             return condition;
         }
@@ -627,7 +627,7 @@ public class ProofTools
         return false;
     }
 
-    public bool Eq(Literal one, Literal two, bool identical)
+    public bool Eq(Literal one, Literal two)
     {
         if (one.Sign != two.Sign || one.Identifier != two.Identifier || one.Arguments.Count != two.Arguments.Count)
         {
@@ -637,29 +637,19 @@ public class ProofTools
         var condition = true;
         foreach (var iteration in iterator)
         {
-            condition = condition && Eq(iteration.Left, iteration.Right, identical);
+            condition = condition && Eq(iteration.Left, iteration.Right);
         }
         return condition;
     }
 
-    public bool Eq(Clause one, Clause two, bool identical)
+    public bool Eq(Clause one, Clause two)
     {
-        if (identical)
-        {
-            var iterator = one.Literals.Zip(two.Literals, (o, t) => new { Left = o, Right = t });
-            var condition = true;
-            foreach (var iteration in iterator)
-            {
-                condition = condition && Eq(iteration.Left, iteration.Right, identical);
-            }
-            return condition;
-        } 
-        foreach (var atom1 in one.Literals)
+        foreach (var literals1 in one.Literals)
         {
             var equ = false;
             foreach (var atom2 in two.Literals)
             {
-                equ = equ || Eq(atom1, atom2, identical);
+                equ = equ || Eq(literals1, atom2);
             }
 
             if (!equ)
@@ -672,7 +662,7 @@ public class ProofTools
             var equ = false;
             foreach (var atom2 in one.Literals)
             {
-                equ = equ || Eq(atom1, atom2, identical);
+                equ = equ || Eq(atom1, atom2);
             }
 
             if (!equ)
@@ -682,9 +672,10 @@ public class ProofTools
         }
         return true;
     }
+
     public bool IsEmptyClause(Clause clause)
     {
-        return Eq(clause, new Clause(new List<Literal>()), false);
+        return Eq(clause, new Clause(new List<Literal>()));
     }
 
     /// <summary>

@@ -354,18 +354,15 @@ namespace Resolution
         }
 
         // Instantiate the arguments of a literal in class dedicated to the clausal form
-        private ClausalForm.IArgument ConvertArgument(IArgument arg)
+        private ClausalForm.IArgument ConvertArgument(IArgument argument)
         {
-            if (arg.GetType() == typeof(Function))
+            switch (argument)
             {
-                var f = (Function)arg;
-                var args = f.args.Select(x => ConvertArgument(x)).ToList();
-                return new ClausalForm.Function(f.identifier, args);
-            }
-            if (arg.GetType() == typeof(Variable))
-            {
-                var f = (Variable)arg;
-                return new ClausalForm.Variable(f.identifier);
+                case Function f:
+                    var args = f.args.Select(x => ConvertArgument(x)).ToList();
+                    return new ClausalForm.Function(f.identifier, args);
+                case Variable v:
+                    return new ClausalForm.Variable(v.identifier);
             }
             throw new ArgumentException("Argument did not have a valid type");
         }
@@ -437,7 +434,6 @@ namespace Resolution
             }
             return new ClausalForm.ClausalFormula(clauses);
         }
-
 
         private List<Variable> CollectVars(IFormula formula)
         {
@@ -588,7 +584,6 @@ namespace Resolution
             return formula;
         }
 
-        // 
         public IFormula UniquefyVariables(IFormula formula)
         {
             IFormula result = formula.Clone();
