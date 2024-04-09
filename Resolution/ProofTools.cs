@@ -78,7 +78,7 @@ public class ProofTools
         var newLiterals = ApplySubstitutions(c1Literals, allSubstitutions);
         newLiterals.AddRange(ApplySubstitutions(c2Literals, allSubstitutions));
 
-        var resolvent = ApplyFactoring(new Clause(newLiterals));
+        var resolvent = new Clause(newLiterals);
         if (_debugMode)
         {
             foreach (var literal in c1Literals)
@@ -413,45 +413,6 @@ public class ProofTools
         return newArgument;
     }
 
-    // TODO This is what needs most rework, maybe check the thesis to see what said about it back then :)
-    public Clause ApplyFactoring(Clause clause)
-    {
-        if (_debugMode)
-        {
-            Console.WriteLine("Factoring clause " + clause.Print());
-        }
-        var atoms = clause.Literals;
-        for (int i = 0; i < atoms.Count; i++)
-        {
-            for (int j = i + 1; j < atoms.Count; j++)
-            {
-                if (Eq(atoms[i], atoms[j]))
-                {
-                    // Check if a variable involved factoring is mentioned anywhere else, as that might affect the soundness. 
-                    if (!atoms[i].Arguments.SelectMany(ArgumentVariables)
-                            .Any(x => atoms.Where(y => y != atoms[i])
-                                .SelectMany(z => z.Arguments).Any(w => VariableOccurs(x, w))))
-                    {
-                        var removeDuplicateClause = atoms.ToList();
-                        removeDuplicateClause.Remove(atoms[j]);
-                        return ApplyFactoring(new Clause(removeDuplicateClause));
-                    }
-
-                    if (!atoms[j].Arguments.SelectMany(ArgumentVariables)
-                            .Any(x => atoms.Where(y => y != atoms[j])
-                                .SelectMany(z => z.Arguments).Any(w => VariableOccurs(x, w))))
-                    {
-                        var removeDuplicateClause = atoms.ToList();
-                        removeDuplicateClause.Remove(atoms[j]);
-                        return ApplyFactoring(new Clause(removeDuplicateClause));
-                    }
-                }
-            }
-        }
-
-        return clause;
-    }
-
     /// <summary>
     /// Tells whether a given variable occurs in a given argument
     /// </summary>
@@ -597,51 +558,6 @@ public class ProofTools
         return new Rename(origin, new Clause(subbed), oldName, newName);
     }
 
-    // checks if arguments are identical
-    public bool Eq(IArgument one, IArgument two)
-    {
-        if (one.GetType() == typeof(Variable) && two.GetType() == typeof(Variable))
-        {
-            var typedOne = (Variable)one;
-            var typedTwo = (Variable)two;
-            return typedOne.identifier == typedTwo.identifier;
-        }
-
-        if (one.GetType() == typeof(Function) && two.GetType() == typeof(Function))
-        {
-            var typedOne = (Function)one;
-            var typedTwo = (Function)two;
-            if (typedOne.arguments.Count != typedTwo.arguments.Count || typedOne.identifier != typedTwo.identifier)
-            {
-                return false;
-            }
-            var iterator = typedOne.arguments.Zip(typedTwo.arguments, (o, t) => new { Left = o, Right = t });
-            var condition = true;
-            foreach (var iteration in iterator)
-            {
-                condition = condition && Eq(iteration.Left, iteration.Right);
-            }
-            return condition;
-        }
-
-        return false;
-    }
-
-    public bool Eq(Literal one, Literal two)
-    {
-        if (one.Sign != two.Sign || one.Identifier != two.Identifier || one.Arguments.Count != two.Arguments.Count)
-        {
-            return false;
-        }
-        var iterator = one.Arguments.Zip(two.Arguments, (o, t) => new { Left = o, Right = t });
-        var condition = true;
-        foreach (var iteration in iterator)
-        {
-            condition = condition && Eq(iteration.Left, iteration.Right);
-        }
-        return condition;
-    }
-
     public bool Eq(Clause one, Clause two)
     {
         foreach (var literals1 in one.Literals)
@@ -673,6 +589,50 @@ public class ProofTools
         return true;
     }
 
+    public bool Eq(Literal one, Literal two)
+    {
+        if (one.Sign != two.Sign || one.Identifier != two.Identifier || one.Arguments.Count != two.Arguments.Count)
+        {
+            return false;
+        }
+        var iterator = one.Arguments.Zip(two.Arguments, (o, t) => new { Left = o, Right = t });
+        var condition = true;
+        foreach (var iteration in iterator)
+        {
+            condition = condition && Eq(iteration.Left, iteration.Right);
+        }
+        return condition;
+    }
+
+    public bool Eq(IArgument one, IArgument two)
+    {
+        if (one.GetType() == typeof(Variable) && two.GetType() == typeof(Variable))
+        {
+            var typedOne = (Variable)one;
+            var typedTwo = (Variable)two;
+            return typedOne.identifier == typedTwo.identifier;
+        }
+
+        if (one.GetType() == typeof(Function) && two.GetType() == typeof(Function))
+        {
+            var typedOne = (Function)one;
+            var typedTwo = (Function)two;
+            if (typedOne.arguments.Count != typedTwo.arguments.Count || typedOne.identifier != typedTwo.identifier)
+            {
+                return false;
+            }
+            var iterator = typedOne.arguments.Zip(typedTwo.arguments, (o, t) => new { Left = o, Right = t });
+            var condition = true;
+            foreach (var iteration in iterator)
+            {
+                condition = condition && Eq(iteration.Left, iteration.Right);
+            }
+            return condition;
+        }
+
+        return false;
+    }
+
     public bool IsEmptyClause(Clause clause)
     {
         return Eq(clause, new Clause(new List<Literal>()));
@@ -697,7 +657,6 @@ public class ProofTools
         return result;
     }
 
-
     /// <summary>
     /// A difference between a literal on the left and a literal on the right
     /// </summary>
@@ -712,6 +671,4 @@ public class ProofTools
             Right = right;
         }
     }
-
-
 }

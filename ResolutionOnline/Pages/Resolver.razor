@@ -177,6 +177,12 @@ else
     /// </summary>
     private void StartResolution()
     {
+        if (_resolveSource == _resolveTarget)
+        {
+            _resolveSource = 0;
+            _resolveTarget = 0;
+            return;
+        }
         _literalSelectorActive = true;
         StateHasChanged();
     }
@@ -303,8 +309,8 @@ else
     /// </summary>
     private void CopyProof()
     {
-        // var c = new Isabelle.AST.ProofConnector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
-        // ClipboardService.CopyToClipboard(Isabelle.Generator.generateSingle(c.x.Item1, c.x.Item2));
+        var c = new Isabelle.AST.ProofConnector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
+        ClipboardService.CopyToClipboard(Isabelle.Generator.generateSingle(c.x.Item1, c.x.Item2));
     }
 
 }

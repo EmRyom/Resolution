@@ -6,39 +6,38 @@ module Generator =
        
     let negation = "n'" 
 
-//    let emptyMgu = """
-//theorem empty_mgu: 
-//    assumes "unifier⇩l⇩s ε L"
-//    shows "mgu⇩l⇩s ε L"
-//using assms unfolding unifier⇩l⇩s_def mgu⇩l⇩s_def apply auto
-//apply (rule_tac x=u in exI)
-//using empty_comp1 empty_comp2 apply auto
-//done
+    let emptyMgu = """
+theorem empty_mgu: 
+    assumes "unifier⇩l⇩s ε L"
+    shows "mgu⇩l⇩s ε L"
+using assms unfolding unifier⇩l⇩s_def mgu⇩l⇩s_def apply auto
+apply (rule_tac x=u in exI)
+using empty_comp1 empty_comp2 apply auto
+done
 
-//theorem unifier_single: "unifier⇩l⇩s σ {l}" 
-//unfolding unifier⇩l⇩s_def by auto
+theorem unifier_single: "unifier⇩l⇩s σ {l}" 
+unfolding unifier⇩l⇩s_def by auto
 
-//theorem resolution_rule':
-//    assumes "C⇩1 ∈ Cs"
-//    assumes "C⇩2 ∈ Cs"
-//    assumes "applicable C⇩1 C⇩2 L⇩1 L⇩2 σ"
-//    assumes "C = {resolution C⇩1 C⇩2 L⇩1 L⇩2 σ}"
-//    shows "resolution_step Cs (Cs ∪ C)"
-//    using assms resolution_rule by auto
-//"""
-    
+theorem resolution_rule':
+    assumes "C⇩1 ∈ Cs"
+    assumes "C⇩2 ∈ Cs"
+    assumes "applicable C⇩1 C⇩2 L⇩1 L⇩2 σ"
+    assumes "C = {resolution C⇩1 C⇩2 L⇩1 L⇩2 σ}"
+    shows "resolution_step Cs (Cs ∪ C)"
+    using assms resolution_rule by auto
+"""
      
-//    let genLiteral (li : Literal) = 
-//        let rec genArgList = function
-//            | Fun(i,[])::[] -> i  
-//            | Fun(i,al)::[] -> i + "_" + genArgList al
-//            | Fun(i,[])::xs -> i + "_" + genArgList xs
-//            | Fun(i,al)::xs -> i + "_" + genArgList al + "_" + genArgList xs 
-//            | Var(i)::[] -> i 
-//            | Var(i)::xs -> i + "_" + genArgList xs
-//            | [] -> ""
-//        match li with (i, al, b) ->
-//        (if b then "" else negation) + i + (if al = [] then "" else "_") + genArgList al
+    let genLiteral (li : Literal) = 
+        let rec genArgList = function
+            | Fun(i,[])::[] -> i  
+            | Fun(i,al)::[] -> i + "_" + genArgList al
+            | Fun(i,[])::xs -> i + "_" + genArgList xs
+            | Fun(i,al)::xs -> i + "_" + genArgList al + "_" + genArgList xs 
+            | Var(i)::[] -> i 
+            | Var(i)::xs -> i + "_" + genArgList xs
+            | [] -> ""
+        match li with (i, al, b) ->
+        (if b then "" else negation) + i + (if al = [] then "" else "_") + genArgList al
 
 //    let genArgumentExplicit (arg : Argument) =
 //        let rec genArgList = function
@@ -122,91 +121,50 @@ module Generator =
 //  from a b show ?thesis unfolding mgu⇩l⇩s_def unfolding mgu_""" + a + """_""" + b + """_def by auto
 //qed""")
 
-    
 
-    
-            
-//    let rec genClause = function 
-//        | x::[] -> genLiteral x
-//        | x::xs -> genLiteral x + "," + genClause xs 
-//        | [] -> ""
+    let rec defineLiterals (al:Literal list):string =
+        let rec defineArgs (al':Argument list) =
+            match al' with
+            | x::xs -> 
+                (match x with 
+                | Fun(i,al'') -> "Fun ''" + i + "'' [" + defineArgs al'' + "]"
+                | Var(i) -> "Var ''" + i + "''") +
+                (match xs with
+                | [] -> ""
+                | _ -> ", " + defineArgs xs)
+            | [] -> ""
+        let defineLiteral (i, al', b) = 
+            "definition " + genLiteral (i, al', b) + " :: ‹fterm literal› where \n  ‹" + 
+            genLiteral (i, al', b) + " = " + 
+            (match b with 
+            | true ->  "Pos" 
+            | false -> "Neg") + 
+            " ''" + i + "'' [" + defineArgs al' + "]›" 
+        match al with 
+        | [] -> ""
+        | (i, al', b)::xs -> 
+            "\n\n" + defineLiteral (i, al', b) + defineLiterals xs
 
-//    let genFormula (f:Clause list) =
-//        let rec genFormula' l = 
-//            match l with 
-//            | x::[] -> "{" + genClause x + "}"
-//            | x::xs -> "{" + genClause x + "}," + genFormula' xs 
-//            | [] -> "{}"
-//        in "{" + genFormula' (List.map (Set.toList) f) + "}"
-    
-//    // Make clashing clauses.
-//    let rec clash = function
-//        | (i, al, b)::xs -> (i, al, b)::(i, al, not b)::clash xs 
-//        | [] -> []
-       
-//    // This looks through the 
-//    let rec findAtoms (f,s) =
-//        let rec formula (f:ClausalFormula):Atom list =
-//            match f with 
-//            | x::xs -> x @ formula xs
-//            | [] -> [] 
-//        let rec steps (ss:Application list) = 
-//            match ss with
-//            | Copy(_)::xs -> steps xs 
-//            | Resolve(_,_,x,_,_)::xs -> x @ steps xs
-//            | Rename(_,_,_,_)::xs -> failwith "Not implemented"
-//            | [] -> []                                                  
-//        formula f @ steps s |> clash |> Set.ofList 
+    let rec allClauses = function 
+        | Copy(x)::xs -> x::allClauses xs
+        | Resolve(_,_,x,_)::xs -> x::allClauses xs
+        | Rename(_,x,_,_)::xs -> x::allClauses xs
+        | [] -> []
 
-//    let rec defineLiterals (al:Literal list):string =
-//        let rec defineArgs (al':Argument list) =
-//            match al' with
-//            | x::xs -> 
-//                (match x with 
-//                | Fun(i,al'') -> "Fun ''" + i + "'' [" + defineArgs al'' + "]"
-//                | Var(i) -> "Var ''" + i + "''") +
-//                (match xs with
-//                | [] -> ""
-//                | _ -> ", " + defineArgs xs)
-//            | [] -> ""
-//        let defineLiteral (i, al', b) = 
-//            "definition " + genLiteral (i, al', b) + " :: ‹fterm literal› where \n  ‹" + 
-//            genLiteral (i, al', b) + " = " + 
-//            (match b with 
-//            | true ->  "Pos" 
-//            | false -> "Neg") + 
-//            " ''" + i + "'' [" + defineArgs al' + "]›" 
-//        match al with 
-//        | [] -> ""
-//        | (i, al', b)::xs -> 
-//            "\n\n" + defineLiteral (i, al', b) + defineLiterals xs
+    let rec originalClauses = function 
+        | Copy(x)::xs -> x::originalClauses xs
+        | _::xs -> originalClauses xs
+        | [] -> [] 
 
-//    let rec allClauses = function 
-//        | Copy(x)::xs -> x::allClauses xs
-//        | Resolve(_,_,x,_)::xs -> x::allClauses xs
-//        | Rename(_,x,_,_)::xs -> x::allClauses xs
-//        | [] -> []
+    //let genDerivation (p:Proof):string = 
+    //    "\n‹resolution_deriv " + (p |> originalClauses |> genFormula) + 
+    //    "\n                  " + (p |> allClauses |> genFormula) + "›"
 
-//    let rec originalClauses = function 
-//        | Copy(x)::xs -> x::originalClauses xs
-//        | _::xs -> originalClauses xs
-//        | [] -> [] 
-
-//    let genDerivation (p:Proof):string = 
-//        "\n‹resolution_deriv " + (p |> originalClauses |> genFormula) + 
-//        "\n                  " + (p |> allClauses |> genFormula) + "›"
-
-//    let rec findClause ref (formula:ClausalFormula, steps:Application list) =
-//        match steps[ref-1] with 
-//        | Copy(x) -> formula[x-1] 
-//        | Resolve(_,_,x,_,_) -> x 
-//        | Rename(_,x,_,_) -> x
-
-//    let genUnifierRef u =
-//        match u with 
-//        | E -> "ε"
-//        | U(a,b,_) -> "mgu_" + genAtom a + "_" + genAtom b
-       
+    let rec findClause ref (steps:Application list) =
+        match steps[ref-1] with 
+        | Copy(x) -> x 
+        | Resolve(_,_,x,_) -> x 
+        | Rename(_,x,_,_) -> x
         
 //    let unify (a1:Atom) (a2:Atom):unifier =
 //        let filter = function
