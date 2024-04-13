@@ -7,9 +7,6 @@ public class ProofTools
 
     public ProofTools(bool debugMode) => _debugMode = debugMode;
 
-    public struct MultipleClashes { public MultipleClashes() { } }
-
-
     public Either<Resolve, ResolveError> Resolve(int n1, int n2, Clause c1, Clause c2,
         HashSet<Literal> l1, HashSet<Literal> l2)
     {
@@ -31,8 +28,8 @@ public class ProofTools
 
         // Start checking the substitutions
         // Keep track of the substitution types
-        Dictionary<string, IArgument> functions = new Dictionary<string, IArgument>();
-        Dictionary<string, string> variables = new Dictionary<string, string>();
+        var functions = new Dictionary<string, IArgument>();
+        var variables = new Dictionary<string, string>();
 
         foreach (var change in changes)
         {
@@ -78,7 +75,7 @@ public class ProofTools
         var newLiterals = ApplySubstitutions(c1Literals, allSubstitutions);
         newLiterals.AddRange(ApplySubstitutions(c2Literals, allSubstitutions));
 
-        var resolvent = ApplyFactoring(new Clause(newLiterals));
+        var resolvent = new Clause(newLiterals);
         if (_debugMode)
         {
             foreach (var literal in c1Literals)
@@ -96,11 +93,97 @@ public class ProofTools
             Console.WriteLine("Resolvent: " + resolvent.Print());
         }
 
-
         // Make resolution step
         var resolution = new Resolve(n1, n2, resolvent, l1, l2, allSubstitutions);
 
         return resolution;
+    }
+
+    /// <summary>
+    /// Checks if a clause is empty.
+    /// </summary>
+    /// <param name="clause"></param>
+    /// <returns></returns>
+    public bool IsEmptyClause(Clause clause)
+    {
+        return Eq(clause, new Clause(new List<Literal>()));
+    }
+
+    /// <summary>
+    /// Pretty print sets of literals
+    /// </summary>
+    /// <param name="literals"></param>
+    /// <returns></returns>
+    public string Print(HashSet<Literal> literals)
+    {
+        var result = string.Empty;
+        var list = literals.ToList();
+
+        for (var index = 0; index < list.Count; index++)
+        {
+            result += list[index].Print();
+            if (index != list.Count - 1) result += ", ";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Renames a variable and creates the rename step to be added to the proof.
+    /// </summary>
+    /// <param name="oldName"></param>
+    /// <param name="newName"></param>
+    /// <param name="origin"></param>
+    /// <param name="clause"></param>
+    /// <returns></returns>
+    public Rename RenameVariable(string oldName, string newName, int origin, Clause clause)
+    {
+        var atoms = clause.Clone();
+        var subbed = ApplySubstitutions(atoms.Literals, new Dictionary<string, IArgument> { { oldName, new Variable(newName) } });
+        return new Rename(origin, new Clause(subbed), oldName, newName);
+    }
+
+    /// <summary>
+    /// Gets a set of all variables in a clause
+    /// </summary>
+    /// <param name="clause"></param>
+    /// <returns></returns>
+    public HashSet<string> ClauseVariables(Clause clause)
+    {
+        return clause.Literals.SelectMany(literal => literal.Arguments.SelectMany(ArgumentVariables)).ToHashSet();
+    }
+
+    public struct ResolveError
+    {
+        public string message;
+        public Error error;
+        public ResolveError(string message, Error error)
+        {
+            this.message = message; this.error = error;
+        }
+
+        public string Print() => error + ": " + message;
+    }
+
+    public enum Error
+    {
+        NoClashesError,
+        InconsistentSubstitutions,
+        CircularSubstitution,
+        NotDisjointVariables
+    }
+
+    public class Either<Left, Right>
+    {
+        private readonly object _value;
+        private Either(object value) { _value = value; }
+
+        public static implicit operator Either<Left, Right>(Left value) => new(value);
+        public static implicit operator Either<Left, Right>(Right value) => new(value);
+
+        public bool IsSuccesful => _value is Left;
+        public Left Resolve => (Left)_value;
+        public Right Error => (Right)_value;
     }
 
     /// <summary>
@@ -122,7 +205,7 @@ public class ProofTools
 
         if (functions.TryGetValue(v.identifier, out var compare))
         {
-            if (!Eq(compare, f, true))
+            if (Eq(compare, f) == false)
             {
                 {
                     return new ResolveError($"Multiple different substitutions for variable {v.identifier}", Error.InconsistentSubstitutions);
@@ -167,7 +250,7 @@ public class ProofTools
         // Check that the substitutions are consistent
         if (functions.TryGetValue(v1.identifier, out var compare1) && functions.TryGetValue(v2.identifier, out var compare2))
         {
-            if (!Eq(compare1, compare2, true))
+            if (Eq(compare1, compare2) == false)
             {
                 return new ResolveError($"Multiple different substitutions for variable {v2.Print()}", Error.InconsistentSubstitutions);
             }
@@ -193,10 +276,6 @@ public class ProofTools
 
         return null;
     }
-
-
-
-
 
     /// <summary>
     /// Unify two sets of literals
@@ -357,16 +436,6 @@ public class ProofTools
         return false;
     }
 
-    /// <summary>
-    /// Gets a set of all variables in a clause
-    /// </summary>
-    /// <param name="clause"></param>
-    /// <returns></returns>
-    public HashSet<string> ClauseVariables(Clause clause)
-    {
-        return clause.Literals.SelectMany(literal => literal.Arguments.SelectMany(ArgumentVariables)).ToHashSet();
-    }
-
     private List<string> ArgumentVariables(IArgument argument)
     {
         if (argument.GetType() == typeof(Variable))
@@ -381,7 +450,7 @@ public class ProofTools
         List<Literal>? substituted1 = null;
         List<Literal>? substituted2 = atoms.ToList();
 
-        while (substituted1 == null || !Eq(new Clause(substituted1), new Clause(substituted2),true))
+        while (substituted1 == null || !Eq(new Clause(substituted1), new Clause(substituted2)))
         {
             substituted1 = substituted2.ToList();
             substituted2 = substituted1.Select(atom =>
@@ -413,44 +482,6 @@ public class ProofTools
         return newArgument;
     }
 
-    public Clause ApplyFactoring(Clause clause)
-    {
-        if (_debugMode)
-        {
-            Console.WriteLine("Factoring clause " + clause.Print());
-        }
-        var atoms = clause.Literals;
-        for (int i = 0; i < atoms.Count; i++)
-        {
-            for (int j = i + 1; j < atoms.Count; j++)
-            {
-                if (Eq(atoms[i], atoms[j], false))
-                {
-                    // Check if a variable involved factoring is mentioned anywhere else, as that might affect the soundness. 
-                    if (!atoms[i].Arguments.SelectMany(ArgumentVariables)
-                            .Any(x => atoms.Where(y => y != atoms[i])
-                                .SelectMany(z => z.Arguments).Any(w => VariableOccurs(x, w))))
-                    {
-                        var removeDuplicateClause = atoms.ToList();
-                        removeDuplicateClause.Remove(atoms[j]);
-                        return ApplyFactoring(new Clause(removeDuplicateClause));
-                    }
-
-                    if (!atoms[j].Arguments.SelectMany(ArgumentVariables)
-                            .Any(x => atoms.Where(y => y != atoms[j])
-                                .SelectMany(z => z.Arguments).Any(w => VariableOccurs(x, w))))
-                    {
-                        var removeDuplicateClause = atoms.ToList();
-                        removeDuplicateClause.Remove(atoms[j]);
-                        return ApplyFactoring(new Clause(removeDuplicateClause));
-                    }
-                }
-            }
-        }
-
-        return clause;
-    }
-
     /// <summary>
     /// Tells whether a given variable occurs in a given argument
     /// </summary>
@@ -477,39 +508,6 @@ public class ProofTools
         }
 
         return false;
-    }
-
-    public struct ResolveError
-    {
-        public string message;
-        public Error error;
-        public ResolveError(string message, Error error)
-        {
-            this.message = message; this.error = error;
-        }
-
-        public string Print() => error + ": " + message;
-    }
-
-    public enum Error
-    {
-        NoClashesError,
-        InconsistentSubstitutions,
-        CircularSubstitution,
-        NotDisjointVariables
-    }
-
-    public class Either<Left, Right>
-    {
-        private readonly object _value;
-        private Either(object value) { _value = value; }
-
-        public static implicit operator Either<Left, Right>(Left value) => new(value);
-        public static implicit operator Either<Left, Right>(Right value) => new(value);
-
-        public bool IsSuccesful => _value is Left;
-        public Left Resolve => (Left)_value;
-        public Right Error => (Right)_value;
     }
 
     /// <summary>
@@ -581,30 +579,59 @@ public class ProofTools
         public UnificationException(string message) : base(message) { }
     }
 
-    /// <summary>
-    /// Renames a variable and creates the rename step to be added to the proof.
-    /// </summary>
-    /// <param name="oldName"></param>
-    /// <param name="newName"></param>
-    /// <param name="origin"></param>
-    /// <param name="clause"></param>
-    /// <returns></returns>
-    public Rename RenameVariable(string oldName, string newName, int origin, Clause clause)
+    private bool Eq(Clause one, Clause two)
     {
-        var atoms = clause.Clone();
-        var subbed = ApplySubstitutions(atoms.Literals, new Dictionary<string, IArgument> { { oldName, new Variable(newName) } });
-        return new Rename(origin, new Clause(subbed), oldName, newName);
+        foreach (var literals1 in one.Literals)
+        {
+            var equ = false;
+            foreach (var atom2 in two.Literals)
+            {
+                equ = equ || Eq(literals1, atom2);
+            }
+
+            if (!equ)
+            {
+                return false;
+            }
+        }
+        foreach (var atom1 in two.Literals)
+        {
+            var equ = false;
+            foreach (var atom2 in one.Literals)
+            {
+                equ = equ || Eq(atom1, atom2);
+            }
+
+            if (!equ)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
-    // checks if arguments are equivalent, or identical
-    // Needs a major rework as the identical variable check is deeply flawed. basically there's no check of consistency in substitutions between variables.
-    public bool Eq(IArgument one, IArgument two, bool identical)
+    private bool Eq(Literal one, Literal two)
+    {
+        if (one.Sign != two.Sign || one.Identifier != two.Identifier || one.Arguments.Count != two.Arguments.Count)
+        {
+            return false;
+        }
+        var iterator = one.Arguments.Zip(two.Arguments, (o, t) => new { Left = o, Right = t });
+        var condition = true;
+        foreach (var iteration in iterator)
+        {
+            condition = condition && Eq(iteration.Left, iteration.Right);
+        }
+        return condition;
+    }
+
+    private bool Eq(IArgument one, IArgument two)
     {
         if (one.GetType() == typeof(Variable) && two.GetType() == typeof(Variable))
         {
             var typedOne = (Variable)one;
             var typedTwo = (Variable)two;
-            return typedOne.identifier == typedTwo.identifier || !identical;
+            return typedOne.identifier == typedTwo.identifier;
         }
 
         if (one.GetType() == typeof(Function) && two.GetType() == typeof(Function))
@@ -619,7 +646,7 @@ public class ProofTools
             var condition = true;
             foreach (var iteration in iterator)
             {
-                condition = condition && Eq(iteration.Left, iteration.Right, identical);
+                condition = condition && Eq(iteration.Left, iteration.Right);
             }
             return condition;
         }
@@ -627,90 +654,10 @@ public class ProofTools
         return false;
     }
 
-    public bool Eq(Literal one, Literal two, bool identical)
-    {
-        if (one.Sign != two.Sign || one.Identifier != two.Identifier || one.Arguments.Count != two.Arguments.Count)
-        {
-            return false;
-        }
-        var iterator = one.Arguments.Zip(two.Arguments, (o, t) => new { Left = o, Right = t });
-        var condition = true;
-        foreach (var iteration in iterator)
-        {
-            condition = condition && Eq(iteration.Left, iteration.Right, identical);
-        }
-        return condition;
-    }
-
-    public bool Eq(Clause one, Clause two, bool identical)
-    {
-        if (identical)
-        {
-            var iterator = one.Literals.Zip(two.Literals, (o, t) => new { Left = o, Right = t });
-            var condition = true;
-            foreach (var iteration in iterator)
-            {
-                condition = condition && Eq(iteration.Left, iteration.Right, identical);
-            }
-            return condition;
-        } 
-        foreach (var atom1 in one.Literals)
-        {
-            var equ = false;
-            foreach (var atom2 in two.Literals)
-            {
-                equ = equ || Eq(atom1, atom2, identical);
-            }
-
-            if (!equ)
-            {
-                return false;
-            }
-        }
-        foreach (var atom1 in two.Literals)
-        {
-            var equ = false;
-            foreach (var atom2 in one.Literals)
-            {
-                equ = equ || Eq(atom1, atom2, identical);
-            }
-
-            if (!equ)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-    public bool IsEmptyClause(Clause clause)
-    {
-        return Eq(clause, new Clause(new List<Literal>()), false);
-    }
-
-    /// <summary>
-    /// Pretty print sets of literals
-    /// </summary>
-    /// <param name="literals"></param>
-    /// <returns></returns>
-    public string Print(HashSet<Literal> literals)
-    {
-        var result = string.Empty;
-        var list = literals.ToList();
-
-        for (var index = 0; index < list.Count; index ++)
-        {
-            result += list[index].Print() ;
-            if (index != list.Count - 1) result += ", ";
-        }
-
-        return result;
-    }
-
-
     /// <summary>
     /// A difference between a literal on the left and a literal on the right
     /// </summary>
-    public class Change
+    private class Change
     {
         public IArgument Left;
         public IArgument Right;
@@ -721,6 +668,4 @@ public class ProofTools
             Right = right;
         }
     }
-
-
 }

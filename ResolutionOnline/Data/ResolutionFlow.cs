@@ -43,13 +43,13 @@ namespace ResolutionOnline.Data
             }
         }
 
-        public void Convert(ClauseConverter clauseConverter, ProofTools proofTools)
+        public void Convert(ClauseConverter clauseConverter)
         {
             var formula = new List<ClausalForm.Clause>();
             if (toConvert != null)
                 foreach (var clause in clauseConverter.Compile(toConvert).Clauses)
                 {
-                    formula.Add(proofTools.ApplyFactoring(clause));
+                    formula.Add(clause);
                 }
 
             proof = new(new ClausalForm.ClausalFormula(formula));

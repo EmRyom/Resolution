@@ -34,14 +34,14 @@
 
     private void Skip()
     {
-        _resolutionFlow.Convert(_clauseConverter,_proofTools);
+        _resolutionFlow.Convert(_clauseConverter);
         ResolutionFlowContainer.Value = _resolutionFlow;
         NavManager.NavigateTo("/resolver");
     }
 
     private void Alternative()
     {
-        _resolutionFlow.Convert(_clauseConverter, _proofTools);
+        _resolutionFlow.Convert(_clauseConverter);
         ResolutionFlowContainer.Value = _resolutionFlow;
         NavManager.NavigateTo("/converter");
     }

@@ -1,4 +1,5 @@
 ﻿@page "/resolver"
+@using Resolution.Utilities;
 @using ResolutionOnline.Data
 @using Resolution
 @inject NavigationManager NavigationManager
@@ -6,6 +7,8 @@
 @using BlazorAnimate
 @inject Clipboard.IClipboardService ClipboardService
 @using ResolutionOnline.Components;
+@using System.Xml;
+@using System.Xml.Serialization;
 
 <h3>Resolver</h3>
 
@@ -19,6 +22,10 @@
         @if (_renameClause != 0)
         {
             <RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameClause))) CancelRenaming="RenameStop" Rename="e => RenameEnd(e.Source, e.Target)" />
+        }
+        @if (_proofImporterActive)
+        {
+            <ProofImporter Import="ImportProof"/>
         }
         <table style="margin: auto; text-align:left;">
             <tbody>
@@ -100,7 +107,13 @@
             <button @onclick="e => CopyProof()">Copy verifiable proof to clipboard</button>
         }
 
-        @* Error messages *@
+        @* Import or export the proof *@
+        <vertic>
+            <button class="proofButton" @onclick="(e => StartProofImport())">Import proof</button>
+            <button class="proofButton" @onclick="(e => ExportProof())">Export proof</button>
+        </vertic>
+
+        @* Display error messages *@
         <div style="height: 30px; padding-bottom : 50px;">
             @for (int ei = 0; ei < _errors.Count; ei++)
             {
@@ -143,25 +156,6 @@ else
         _resolutionFlow = ResolutionFlowContainer.Value;
     }
 
-    /// <summary>
-    /// 1st clause that is being resolved on.
-    /// </summary>
-    int _resolveSource;
-    /// <summary>
-    /// 2nd clause that is being resolved on.
-    /// </summary>
-    int _resolveTarget; 
-
-    /// <summary>
-    /// List of errors currently displayed
-    /// </summary>
-    List<ProofTools.ResolveError> _errors = new();
-    /// <summary>
-    /// Indicates how many error messages are currently displayed
-    /// </summary>
-    int _toDeleteErrors; 
-
-
     // Front end triggers
     /// <summary>
     /// Indicates whether the choice prompt window should be shown.
@@ -171,12 +165,66 @@ else
     /// The clause that needs to have a variable renamed. 0 if not active.
     /// </summary>
     int _renameClause;
+    /// <summary>
+    /// Indicates whether the proof importer prompt is active.
+    /// </summary>
+    bool _proofImporterActive;
 
+    #region Resolver Control
+    /// <summary>
+    /// 1st clause that is being resolved on.
+    /// </summary>
+    int _resolveSource;
+    /// <summary>
+    /// 2nd clause that is being resolved on.
+    /// </summary>
+    int _resolveTarget;
+
+    /// <summary>
+    /// When clicking an dragging a clause, set that clause as the source
+    /// </summary>
+    /// <param name="index"></param>
+    private void SetResolveSource(int index)
+    {
+        _resolveSource = index;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// When dragging into a clause, set that clause as the target
+    /// </summary>
+    /// <param name="index"></param>
+    private void SetResolveTarget(int index)
+    {
+        if (_resolveSource == 0) return;
+        _resolveTarget = index;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Resets the resolutions relevant stuff to zero.
+    /// </summary>
+    private void ResetResolve()
+    {
+        _resolveSource = 0;
+        _resolveTarget = 0;
+        _literalSelectorActive = false;
+        StateHasChanged();
+    }
+    #endregion
+
+    #region Resolution
     /// <summary>
     /// To initiate resolution, start the literal selector.
     /// </summary>
     private void StartResolution()
     {
+        if (_resolveSource == _resolveTarget)
+        {
+            _resolveSource = 0;
+            _resolveTarget = 0;
+            return;
+        }
         _literalSelectorActive = true;
         StateHasChanged();
     }
@@ -211,6 +259,17 @@ else
 
         ResetResolve();
     }
+    #endregion
+
+    #region Errors
+    /// <summary>
+    /// List of errors currently displayed
+    /// </summary>
+    List<ProofTools.ResolveError> _errors = new();
+    /// <summary>
+    /// Indicates how many error messages are currently displayed
+    /// </summary>
+    int _toDeleteErrors;
 
     /// <summary>
     /// Automatically deletes an error as it is being shown
@@ -224,39 +283,7 @@ else
         _errors.RemoveAt(0);
         StateHasChanged();
     }
-
-    /// <summary>
-    /// When clicking an dragging a clause, set that clause as the source
-    /// </summary>
-    /// <param name="index"></param>
-    private void SetResolveSource(int index) 
-    { 
-        _resolveSource = index; 
-        StateHasChanged(); 
-    }
-
-    /// <summary>
-    /// When dragging into a clause, set that clause as the target
-    /// </summary>
-    /// <param name="index"></param>
-    private void SetResolveTarget(int index)
-    {
-        if (_resolveSource == 0) return;
-        _resolveTarget = index; 
-        StateHasChanged();
-    } 
-
-
-    /// <summary>
-    /// Resets the resolutions relevant stuff to zero.
-    /// </summary>
-    private void ResetResolve() 
-    { 
-        _resolveSource = 0; 
-        _resolveTarget = 0; 
-        _literalSelectorActive = false;
-        StateHasChanged(); 
-    }
+    #endregion 
 
     /// <summary>
     /// Delete a step from the proof.
@@ -264,6 +291,7 @@ else
     /// <param name="index"></param>
     private void Delete(int index) { _resolutionFlow.proof.DeleteApplication(index); StateHasChanged(); }
 
+    #region Renaming
     /// <summary>
     /// Invoked to finish a renaming step. Calculates the new clause where the varaible is renamed to the target name. 
     /// Adds the renaming step to the proof.
@@ -297,15 +325,46 @@ else
         _renameClause = 0;
         StateHasChanged();
     }
+    #endregion
 
     /// <summary>
     /// DISABLED Summons the Isabelle proof generator to generate the formally verifiable proof, then copies to the clipboard.
     /// </summary>
     private void CopyProof()
     {
-        // var c = new Isabelle.AST.ProofConnector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
-        // ClipboardService.CopyToClipboard(Isabelle.Generator.generateSingle(c.x.Item1, c.x.Item2));
+        var c = new Isabelle.AST.Connector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
+        //ClipboardService.CopyToClipboard(Isabelle.Generator.generateSingle(c.x.Item1, c.x.Item2));
     }
+
+    #region Proof Import/Export
+    private void StartProofImport()
+    {
+        _proofImporterActive = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Returns a JSON serialization of the proof
+    /// </summary>
+    /// <returns></returns>
+    private void ExportProof()
+    {
+        var proof = Serializer.Export(_resolutionFlow.toParse, _resolutionFlow.proof);
+        ClipboardService.CopyToClipboard(proof.ToString());
+    }
+
+    /// <summary>
+    /// Imports a JSON serialization of a proof
+    /// </summary>
+    /// <param name="input"></param>
+    private void ImportProof(string input)
+    {
+        var proof = Serializer.ImportProof(input);
+        _resolutionFlow.proof = proof;
+        _proofImporterActive = false;
+        StateHasChanged();
+    }
+    #endregion
 
 }
 

@@ -11,48 +11,43 @@
 {
     <div style="margin: auto; width: 100%; text-align:center;">
         Negation of the formula:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(0.5)">
+        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
             <vertic2>@((MarkupString)_step1.Print())</vertic2>
         </Animate>
         
         Reduction of implication:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(1.5)">
+        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(1.5)">
             <vertic2>@((MarkupString)_step2.Print())</vertic2>
         </Animate>
 
         Movement of negation inwards:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(2.5)">
+        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(2.5)">
             <vertic2>@((MarkupString)_step3.Print())</vertic2>
         </Animate>
         
         Rename of all existential variables to unique names:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(3.5)">
+        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(3.5)">
             <vertic2>@((MarkupString)_step4.Print())</vertic2>
         </Animate>
         
         Skolemization:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(4.5)">
+        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(4.5)">
             <vertic2>@((MarkupString)_step5.Print())</vertic2>
         </Animate>
         
         Dropping universal quantification:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(5.5)">
+        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(5.5)">
             <vertic2>@((MarkupString)_step6.Print())</vertic2>
         </Animate>
 
         Distribution of the conjunctions and disjunctions:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(6.5)">
+        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(6.5)">
             <vertic2>@((MarkupString)_step7.Print())</vertic2>
         </Animate>
 
         In clausal form:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(7.5)">
+        <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(7.5)">
             <vertic2>@((MarkupString)_step8.Print())</vertic2>
-        </Animate>
-        
-        Application of factoring:
-        <Animate Animation="Animations.FlipDown" Duration="TimeSpan.FromSeconds(8.5)">
-            <vertic2>@((MarkupString)_step9.Print())</vertic2>
         </Animate>
 
         <button type="button" @onclick="MoveToResolver">
@@ -103,12 +98,12 @@ else
         _step6 = _clauseConverter.DropUniversals(_step5.Clone());
         _step7 = _clauseConverter.Distribute(_step6.Clone());
         _step8 = _clauseConverter.StraightConversion(_step7.Clone());
-        _step9 = new ClausalForm.ClausalFormula(_step8.Clauses.Select(x => _proofTools.ApplyFactoring(x)).ToList());
+        _step9 = new ClausalForm.ClausalFormula(_step8.Clauses.ToList());
     }
 
     private void MoveToResolver()
     {
-        _resolutionFlow.Convert(_clauseConverter,_proofTools);
+        _resolutionFlow.Convert(_clauseConverter);
         ResolutionFlowContainer.Value = _resolutionFlow;
         NavigationManager.NavigateTo("/resolver");
     }

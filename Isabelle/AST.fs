@@ -26,4 +26,4 @@ module AST =
 
     type Proof = Application list 
 
-    type ProofConnector = { x: Proof }
+    type Connector = { x: Proof }
