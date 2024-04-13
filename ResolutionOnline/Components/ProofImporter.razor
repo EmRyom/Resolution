@@ -1,0 +1,20 @@
+﻿@using static Resolution.ClausalForm;
+
+<div class="overlay">
+    <div class="selector">
+        <div style="padding: 10px">
+            <EditForm OnSubmit="e => Import.InvokeAsync(ProofToImport)" Model="@this">
+                <InputText @bind-Value="@ProofToImport" @oninput="e => StateHasChanged()" />
+
+                <button type="submit">Import</button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<string> Import { get; set; }
+
+    public string ProofToImport = string.Empty;
+}
