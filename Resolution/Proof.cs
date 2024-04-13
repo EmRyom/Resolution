@@ -15,6 +15,8 @@ namespace Resolution
             }
         }
 
+        public Proof() { }
+
         public Clause GetClause(int n)
         {
             var current = Applications[n-1];
@@ -39,23 +41,21 @@ namespace Resolution
 
         // This function finds if an application is used further down the proof, with
         // the intent of allowing/disallowing its removal in the UI
-        public bool MustKeepApplication(int n)
+        public bool MustKeepApplication(int index)
         {
-            if (Applications[n - 1].GetType() == typeof(Copy))
+            switch (Applications[index - 1])
             {
-                return true;
+                case Copy _: return true;
+                default: break;
             }
             foreach (var application in Applications)
             {
-                if (application.GetType() == typeof(Resolve))
+                switch (application)
                 {
-                    var current = (Resolve)application;
-                    if (current.FirstClause == n || current.SecondClause == n) { return true; }
-                }
-                if (application.GetType() == typeof(Rename))
-                {
-                    var current = (Rename)application;
-                    if (current.origin == n) { return true; }
+                    case Resolve r: 
+                        if (r.FirstClause == index || r.SecondClause == index) { return true; } break;
+                    case Rename e: 
+                        if (e.origin == index) { return true; } break;
                 }
             }
             return false;
@@ -104,7 +104,7 @@ namespace Resolution
                     Applications.RemoveAt(i);
                     i--;
                     deleted = true;
-                } 
+                }
             }
         }
     }
@@ -115,7 +115,7 @@ namespace Resolution
         public string PrintSubstitutions();
         public Clause GetClause();
     }
-    
+
     public class Copy : IApplication
     {
         public Clause Clause { get; set; }
