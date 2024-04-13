@@ -103,7 +103,7 @@ else
 
     private void MoveToResolver()
     {
-        _resolutionFlow.Convert(_clauseConverter,_proofTools);
+        _resolutionFlow.Convert(_clauseConverter);
         ResolutionFlowContainer.Value = _resolutionFlow;
         NavigationManager.NavigateTo("/resolver");
     }

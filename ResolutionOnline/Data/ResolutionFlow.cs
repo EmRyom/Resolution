@@ -43,7 +43,7 @@ namespace ResolutionOnline.Data
             }
         }
 
-        public void Convert(ClauseConverter clauseConverter, ProofTools proofTools)
+        public void Convert(ClauseConverter clauseConverter)
         {
             var formula = new List<ClausalForm.Clause>();
             if (toConvert != null)
