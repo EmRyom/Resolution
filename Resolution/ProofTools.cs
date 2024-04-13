@@ -7,9 +7,6 @@ public class ProofTools
 
     public ProofTools(bool debugMode) => _debugMode = debugMode;
 
-    public struct MultipleClashes { public MultipleClashes() { } }
-
-
     public Either<Resolve, ResolveError> Resolve(int n1, int n2, Clause c1, Clause c2,
         HashSet<Literal> l1, HashSet<Literal> l2)
     {
@@ -31,8 +28,8 @@ public class ProofTools
 
         // Start checking the substitutions
         // Keep track of the substitution types
-        Dictionary<string, IArgument> functions = new Dictionary<string, IArgument>();
-        Dictionary<string, string> variables = new Dictionary<string, string>();
+        var functions = new Dictionary<string, IArgument>();
+        var variables = new Dictionary<string, string>();
 
         foreach (var change in changes)
         {
@@ -96,11 +93,97 @@ public class ProofTools
             Console.WriteLine("Resolvent: " + resolvent.Print());
         }
 
-
         // Make resolution step
         var resolution = new Resolve(n1, n2, resolvent, l1, l2, allSubstitutions);
 
         return resolution;
+    }
+
+    /// <summary>
+    /// Checks if a clause is empty.
+    /// </summary>
+    /// <param name="clause"></param>
+    /// <returns></returns>
+    public bool IsEmptyClause(Clause clause)
+    {
+        return Eq(clause, new Clause(new List<Literal>()));
+    }
+
+    /// <summary>
+    /// Pretty print sets of literals
+    /// </summary>
+    /// <param name="literals"></param>
+    /// <returns></returns>
+    public string Print(HashSet<Literal> literals)
+    {
+        var result = string.Empty;
+        var list = literals.ToList();
+
+        for (var index = 0; index < list.Count; index++)
+        {
+            result += list[index].Print();
+            if (index != list.Count - 1) result += ", ";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Renames a variable and creates the rename step to be added to the proof.
+    /// </summary>
+    /// <param name="oldName"></param>
+    /// <param name="newName"></param>
+    /// <param name="origin"></param>
+    /// <param name="clause"></param>
+    /// <returns></returns>
+    public Rename RenameVariable(string oldName, string newName, int origin, Clause clause)
+    {
+        var atoms = clause.Clone();
+        var subbed = ApplySubstitutions(atoms.Literals, new Dictionary<string, IArgument> { { oldName, new Variable(newName) } });
+        return new Rename(origin, new Clause(subbed), oldName, newName);
+    }
+
+    /// <summary>
+    /// Gets a set of all variables in a clause
+    /// </summary>
+    /// <param name="clause"></param>
+    /// <returns></returns>
+    public HashSet<string> ClauseVariables(Clause clause)
+    {
+        return clause.Literals.SelectMany(literal => literal.Arguments.SelectMany(ArgumentVariables)).ToHashSet();
+    }
+
+    public struct ResolveError
+    {
+        public string message;
+        public Error error;
+        public ResolveError(string message, Error error)
+        {
+            this.message = message; this.error = error;
+        }
+
+        public string Print() => error + ": " + message;
+    }
+
+    public enum Error
+    {
+        NoClashesError,
+        InconsistentSubstitutions,
+        CircularSubstitution,
+        NotDisjointVariables
+    }
+
+    public class Either<Left, Right>
+    {
+        private readonly object _value;
+        private Either(object value) { _value = value; }
+
+        public static implicit operator Either<Left, Right>(Left value) => new(value);
+        public static implicit operator Either<Left, Right>(Right value) => new(value);
+
+        public bool IsSuccesful => _value is Left;
+        public Left Resolve => (Left)_value;
+        public Right Error => (Right)_value;
     }
 
     /// <summary>
@@ -193,10 +276,6 @@ public class ProofTools
 
         return null;
     }
-
-
-
-
 
     /// <summary>
     /// Unify two sets of literals
@@ -357,16 +436,6 @@ public class ProofTools
         return false;
     }
 
-    /// <summary>
-    /// Gets a set of all variables in a clause
-    /// </summary>
-    /// <param name="clause"></param>
-    /// <returns></returns>
-    public HashSet<string> ClauseVariables(Clause clause)
-    {
-        return clause.Literals.SelectMany(literal => literal.Arguments.SelectMany(ArgumentVariables)).ToHashSet();
-    }
-
     private List<string> ArgumentVariables(IArgument argument)
     {
         if (argument.GetType() == typeof(Variable))
@@ -441,39 +510,6 @@ public class ProofTools
         return false;
     }
 
-    public struct ResolveError
-    {
-        public string message;
-        public Error error;
-        public ResolveError(string message, Error error)
-        {
-            this.message = message; this.error = error;
-        }
-
-        public string Print() => error + ": " + message;
-    }
-
-    public enum Error
-    {
-        NoClashesError,
-        InconsistentSubstitutions,
-        CircularSubstitution,
-        NotDisjointVariables
-    }
-
-    public class Either<Left, Right>
-    {
-        private readonly object _value;
-        private Either(object value) { _value = value; }
-
-        public static implicit operator Either<Left, Right>(Left value) => new(value);
-        public static implicit operator Either<Left, Right>(Right value) => new(value);
-
-        public bool IsSuccesful => _value is Left;
-        public Left Resolve => (Left)_value;
-        public Right Error => (Right)_value;
-    }
-
     /// <summary>
     /// Unify two literals
     /// </summary>
@@ -543,22 +579,7 @@ public class ProofTools
         public UnificationException(string message) : base(message) { }
     }
 
-    /// <summary>
-    /// Renames a variable and creates the rename step to be added to the proof.
-    /// </summary>
-    /// <param name="oldName"></param>
-    /// <param name="newName"></param>
-    /// <param name="origin"></param>
-    /// <param name="clause"></param>
-    /// <returns></returns>
-    public Rename RenameVariable(string oldName, string newName, int origin, Clause clause)
-    {
-        var atoms = clause.Clone();
-        var subbed = ApplySubstitutions(atoms.Literals, new Dictionary<string, IArgument> { { oldName, new Variable(newName) } });
-        return new Rename(origin, new Clause(subbed), oldName, newName);
-    }
-
-    public bool Eq(Clause one, Clause two)
+    private bool Eq(Clause one, Clause two)
     {
         foreach (var literals1 in one.Literals)
         {
@@ -589,7 +610,7 @@ public class ProofTools
         return true;
     }
 
-    public bool Eq(Literal one, Literal two)
+    private bool Eq(Literal one, Literal two)
     {
         if (one.Sign != two.Sign || one.Identifier != two.Identifier || one.Arguments.Count != two.Arguments.Count)
         {
@@ -604,7 +625,7 @@ public class ProofTools
         return condition;
     }
 
-    public bool Eq(IArgument one, IArgument two)
+    private bool Eq(IArgument one, IArgument two)
     {
         if (one.GetType() == typeof(Variable) && two.GetType() == typeof(Variable))
         {
@@ -633,34 +654,10 @@ public class ProofTools
         return false;
     }
 
-    public bool IsEmptyClause(Clause clause)
-    {
-        return Eq(clause, new Clause(new List<Literal>()));
-    }
-
-    /// <summary>
-    /// Pretty print sets of literals
-    /// </summary>
-    /// <param name="literals"></param>
-    /// <returns></returns>
-    public string Print(HashSet<Literal> literals)
-    {
-        var result = string.Empty;
-        var list = literals.ToList();
-
-        for (var index = 0; index < list.Count; index ++)
-        {
-            result += list[index].Print() ;
-            if (index != list.Count - 1) result += ", ";
-        }
-
-        return result;
-    }
-
     /// <summary>
     /// A difference between a literal on the left and a literal on the right
     /// </summary>
-    public class Change
+    private class Change
     {
         public IArgument Left;
         public IArgument Right;
