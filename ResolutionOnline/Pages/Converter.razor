@@ -66,7 +66,6 @@ else
 @code {
     ResolutionFlow? _resolutionFlow;
     ClauseConverter _clauseConverter;
-    ProofTools _proofTools;
 
     GeneralForm.IFormula _step1;
     GeneralForm.IFormula _step2;
@@ -83,7 +82,6 @@ else
         ResolutionFlowContainer.OnStateChange += StateHasChanged;
         _resolutionFlow = ResolutionFlowContainer.Value;
         _clauseConverter = new ClauseConverter(false);
-        _proofTools = new ProofTools(false);
 
         if (_resolutionFlow?.toConvert == null)
         {

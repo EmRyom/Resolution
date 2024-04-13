@@ -1,13 +1,9 @@
 ﻿namespace Resolution;
 using static ClausalForm;
 
-public class ProofTools
+public static class ProofTools
 {
-    private readonly bool _debugMode = false;
-
-    public ProofTools(bool debugMode) => _debugMode = debugMode;
-
-    public Either<Resolve, ResolveError> Resolve(int n1, int n2, Clause c1, Clause c2,
+    public static Either<Resolve, ResolveError> Resolve(int n1, int n2, Clause c1, Clause c2,
         HashSet<Literal> l1, HashSet<Literal> l2)
     {
         List<Change>? changes;
@@ -19,10 +15,7 @@ public class ProofTools
         catch (UnificationException ue)
         {
             var err = new ResolveError($"Clauses {c1.Print()} and {c2.Print()} do not clash. {"(" + ue.Message + ")"}", Error.NoClashesError);
-            if (_debugMode)
-            {
-                Console.WriteLine(err.Print());
-            }
+            Console.WriteLine(err.Print());
             return err;
         }
 
@@ -76,22 +69,20 @@ public class ProofTools
         newLiterals.AddRange(ApplySubstitutions(c2Literals, allSubstitutions));
 
         var resolvent = new Clause(newLiterals);
-        if (_debugMode)
+
+        foreach (var literal in c1Literals)
         {
-            foreach (var literal in c1Literals)
-            {
-                Console.WriteLine($"Literals on the left side {literal.Print()}");
-            }
-            foreach (var literal in c2Literals)
-            {
-                Console.WriteLine($"Literals on the right side {literal.Print()}");
-            }
-            foreach (var literal in newLiterals)
-            {
-                Console.WriteLine($"Literals on the resolvent side {literal.Print()}");
-            }
-            Console.WriteLine("Resolvent: " + resolvent.Print());
+            Console.WriteLine($"Literals on the left side {literal.Print()}");
         }
+        foreach (var literal in c2Literals)
+        {
+            Console.WriteLine($"Literals on the right side {literal.Print()}");
+        }
+        foreach (var literal in newLiterals)
+        {
+            Console.WriteLine($"Literals on the resolvent side {literal.Print()}");
+        }
+        Console.WriteLine("Resolvent: " + resolvent.Print());
 
         // Make resolution step
         var resolution = new Resolve(n1, n2, resolvent, l1, l2, allSubstitutions);
@@ -104,7 +95,7 @@ public class ProofTools
     /// </summary>
     /// <param name="clause"></param>
     /// <returns></returns>
-    public bool IsEmptyClause(Clause clause)
+    public static bool IsEmptyClause(Clause clause)
     {
         return Eq(clause, new Clause(new List<Literal>()));
     }
@@ -114,7 +105,7 @@ public class ProofTools
     /// </summary>
     /// <param name="literals"></param>
     /// <returns></returns>
-    public string Print(HashSet<Literal> literals)
+    public static string Print(HashSet<Literal> literals)
     {
         var result = string.Empty;
         var list = literals.ToList();
@@ -136,7 +127,7 @@ public class ProofTools
     /// <param name="origin"></param>
     /// <param name="clause"></param>
     /// <returns></returns>
-    public Rename RenameVariable(string oldName, string newName, int origin, Clause clause)
+    public static Rename RenameVariable(string oldName, string newName, int origin, Clause clause)
     {
         var atoms = clause.Clone();
         var subbed = ApplySubstitutions(atoms.Literals, new Dictionary<string, IArgument> { { oldName, new Variable(newName) } });
@@ -148,7 +139,7 @@ public class ProofTools
     /// </summary>
     /// <param name="clause"></param>
     /// <returns></returns>
-    public HashSet<string> ClauseVariables(Clause clause)
+    public static HashSet<string> ClauseVariables(Clause clause)
     {
         return clause.Literals.SelectMany(literal => literal.Arguments.SelectMany(ArgumentVariables)).ToHashSet();
     }
@@ -194,7 +185,7 @@ public class ProofTools
     /// <param name="functions"></param>
     /// <param name="variables"></param>
     /// <returns></returns>
-    private ResolveError? HandleChange(Variable v, Function f, Dictionary<string, IArgument> functions, Dictionary<string, string> variables)
+    private static ResolveError? HandleChange(Variable v, Function f, Dictionary<string, IArgument> functions, Dictionary<string, string> variables)
     {
         if (VariableOccurs(v.identifier, f))
         {
@@ -240,7 +231,7 @@ public class ProofTools
     /// <param name="functions"></param>
     /// <param name="variables"></param>
     /// <returns></returns>
-    private ResolveError? HandleChange(Variable v1, Variable v2, Dictionary<string, IArgument> functions, Dictionary<string, string> variables)
+    private static ResolveError? HandleChange(Variable v1, Variable v2, Dictionary<string, IArgument> functions, Dictionary<string, string> variables)
     {
         if (v1.identifier == v2.identifier)
         {
@@ -285,7 +276,7 @@ public class ProofTools
     /// <returns></returns>
     /// <exception cref="UnificationException"></exception>
     /// <exception cref="NotImplementedException"></exception>
-    private List<Change> Unify(HashSet<Literal> left, HashSet<Literal> right)
+    private static List<Change> Unify(HashSet<Literal> left, HashSet<Literal> right)
     {
         // Check signs and identifiers
         var err = CheckSignsAndIdentifiers(left,right);
@@ -310,7 +301,7 @@ public class ProofTools
     /// <param name="left"></param>
     /// <param name="right"></param>
     /// <returns></returns>
-    private UnificationException? CheckSignsAndIdentifiers(HashSet<Literal> left,
+    private static UnificationException? CheckSignsAndIdentifiers(HashSet<Literal> left,
         HashSet<Literal> right)
     {
         if (left.Count == 0 || right.Count == 0)
@@ -338,7 +329,7 @@ public class ProofTools
     /// </summary>
     /// <param name="literals"></param>
     /// <returns></returns>
-    private UnificationException? CheckSignsAndIdentifiers(HashSet<Literal> literals)
+    private static UnificationException? CheckSignsAndIdentifiers(HashSet<Literal> literals)
     {
         // Check that sign and identifier of the literal are the same across both groups
         var firstInLeft = literals.First();
@@ -364,7 +355,7 @@ public class ProofTools
     /// <param name="variables"></param>
     /// <param name="functions"></param>
     /// <returns></returns>
-    private bool CheckForCircularSubstitutions(Dictionary<string, string> variables, Dictionary<string, IArgument> functions)
+    private static bool CheckForCircularSubstitutions(Dictionary<string, string> variables, Dictionary<string, IArgument> functions)
     {
         // Left side is dependent on the right side.
         // Dependency set contains a tuple of bool and string, where bool represents whether the variable is encased in a function
@@ -407,7 +398,7 @@ public class ProofTools
         return false;
     }
 
-    private bool CheckForCircularSubstitutions(string pairKey, HashSet<Tuple<bool, string>> visited, Dictionary<string, HashSet<Tuple<bool,string>>> dependencies)
+    private static bool CheckForCircularSubstitutions(string pairKey, HashSet<Tuple<bool, string>> visited, Dictionary<string, HashSet<Tuple<bool,string>>> dependencies)
     {
         visited = visited.ToList().ToHashSet();
         if (!dependencies.ContainsKey(pairKey))
@@ -436,7 +427,7 @@ public class ProofTools
         return false;
     }
 
-    private List<string> ArgumentVariables(IArgument argument)
+    private static List<string> ArgumentVariables(IArgument argument)
     {
         if (argument.GetType() == typeof(Variable))
             return new List<string> { ((Variable)argument).identifier };
@@ -445,7 +436,7 @@ public class ProofTools
         throw new ArgumentException();
     }
 
-    private List<Literal> ApplySubstitutions(List<Literal> atoms, Dictionary<string,IArgument> substitutions)
+    private static List<Literal> ApplySubstitutions(List<Literal> atoms, Dictionary<string,IArgument> substitutions)
     {
         List<Literal>? substituted1 = null;
         List<Literal>? substituted2 = atoms.ToList();
@@ -460,7 +451,7 @@ public class ProofTools
         return substituted1;
     }
 
-    private List<IArgument> ApplySubstitutions(List<IArgument> arguments, Dictionary<string, IArgument> substitutions)
+    private static List<IArgument> ApplySubstitutions(List<IArgument> arguments, Dictionary<string, IArgument> substitutions)
     {
         var newArgument = new List<IArgument>();
         foreach (var argument in arguments)
@@ -488,7 +479,7 @@ public class ProofTools
     /// <param name="varname"></param>
     /// <param name="arg"></param>
     /// <returns></returns>
-    private bool VariableOccurs(string varname, IArgument arg)
+    private static bool VariableOccurs(string varname, IArgument arg)
     {
         if (arg.GetType() == typeof(Function))
         {
@@ -517,7 +508,7 @@ public class ProofTools
     /// <param name="a2"></param>
     /// <returns></returns>
     /// <exception cref="UnificationException"></exception>
-    private List<Change> Unify(Literal a1, Literal a2)
+    private static List<Change> Unify(Literal a1, Literal a2)
     {
         var substitutions = new List<Change>();
         if (a1.Identifier != a2.Identifier || a1.Sign == a2.Sign)
@@ -543,7 +534,7 @@ public class ProofTools
     /// <param name="a2"></param>
     /// <returns></returns>
     /// <exception cref="UnificationException"></exception>
-    private List<Change> Unify(IArgument a1, IArgument a2)
+    private static List<Change> Unify(IArgument a1, IArgument a2)
     {
         var changes = new List<Change>();
         switch (a1, a2)
@@ -579,7 +570,7 @@ public class ProofTools
         public UnificationException(string message) : base(message) { }
     }
 
-    private bool Eq(Clause one, Clause two)
+    private static bool Eq(Clause one, Clause two)
     {
         foreach (var literals1 in one.Literals)
         {
@@ -610,7 +601,7 @@ public class ProofTools
         return true;
     }
 
-    private bool Eq(Literal one, Literal two)
+    private static bool Eq(Literal one, Literal two)
     {
         if (one.Sign != two.Sign || one.Identifier != two.Identifier || one.Arguments.Count != two.Arguments.Count)
         {
@@ -625,7 +616,7 @@ public class ProofTools
         return condition;
     }
 
-    private bool Eq(IArgument one, IArgument two)
+    private static bool Eq(IArgument one, IArgument two)
     {
         if (one.GetType() == typeof(Variable) && two.GetType() == typeof(Variable))
         {
