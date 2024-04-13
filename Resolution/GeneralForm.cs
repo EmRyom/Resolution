@@ -146,8 +146,6 @@ public class GeneralForm
     {
         public string Print();
         public IArgument Clone();
-        public bool Eq(IArgument other);
-
     }
 
     public class Variable : IArgument
@@ -159,12 +157,6 @@ public class GeneralForm
         public string Print() => "<font color=\"#f26c18\">" + identifier + "</font>";
 
         public IArgument Clone() => new Variable(identifier);
-
-        public bool Eq(IArgument other)
-        {
-            var typed = (Variable)other;
-            return typed.identifier == identifier;
-        }
     }
 
     public class Function : IArgument
@@ -209,13 +201,6 @@ public class GeneralForm
             }
 
             return new Function(identifier, arguments) { skolem = true };
-        }
-
-        public bool Eq(IArgument other)
-        {
-            var typed = (Function)other;
-            var iterator = args.Zip(typed.args, (o, t) => new { Left = o, Right = t }).ToList();
-            return identifier == typed.identifier && iterator.All(x => x.Left.Eq(x.Right));
         }
     }
 }
