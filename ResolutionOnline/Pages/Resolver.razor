@@ -114,25 +114,9 @@
         </vertic>
 
         @* Display error messages *@
-        <div style="height: 30px; padding-bottom : 50px;">
-            @for (int ei = 0; ei < _errors.Count; ei++)
-            {
-                var m = ((MarkupString)_errors[ei].message);
-                <vertic>
-                    <Animate Animation="Animations.Fade" Duration="TimeSpan.FromSeconds(0.5)">
-                        <message>
-                            @m
-                        </message>
-                    </Animate>
-                    @{
-                        if (_toDeleteErrors <= ei)
-                        {
-                            DeleteError();
-                        }
-                    }
-                </vertic>
-            }
-        </div>
+        <Toasts class="p-3" Messages="messages" AutoHide="true" Delay="6000" Placement="ToastsPlacement.TopRight" />
+
+        
     </div>
 }
 else
@@ -252,37 +236,18 @@ else
         }
         else
         {
-            _errors.Add(result.Error);
-            Console.WriteLine($"Error list length: {_errors.Count} Index of new error {_errors.IndexOf(result.Error)} ");
+            messages.Add(new ToastMessage
+                {
+                    Type = ToastType.Danger,
+                    Title = "Error",
+                    HelpText = $"{DateTime.Now}",
+                    Message = result.Error.message,
+                });
         }
 
         ResetResolve();
     }
     #endregion
-
-    #region Errors
-    /// <summary>
-    /// List of errors currently displayed
-    /// </summary>
-    List<ProofTools.ResolveError> _errors = new();
-    /// <summary>
-    /// Indicates how many error messages are currently displayed
-    /// </summary>
-    int _toDeleteErrors;
-
-    /// <summary>
-    /// Automatically deletes an error as it is being shown
-    /// </summary>
-    private async void DeleteError()
-    {
-        _toDeleteErrors++;
-        StateHasChanged();
-        await Task.Delay(3000);
-        _toDeleteErrors--;
-        _errors.RemoveAt(0);
-        StateHasChanged();
-    }
-    #endregion 
 
     /// <summary>
     /// Delete a step from the proof.
@@ -356,6 +321,12 @@ else
     {
         var proof = Serializer.Export(_resolutionFlow.toParse, _resolutionFlow.proof);
         ClipboardService.CopyToClipboard(proof.ToString());
+
+        messages.Add(new ToastMessage
+            {
+                Type = ToastType.Success,
+                Message = $"Copied proof to clipboard.",
+            });
     }
 
     /// <summary>
@@ -369,6 +340,8 @@ else
         StopProofImport();
     }
     #endregion
+
+    List<ToastMessage> messages = new List<ToastMessage>();
 
 }
 
