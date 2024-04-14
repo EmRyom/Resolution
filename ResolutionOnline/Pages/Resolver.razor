@@ -21,11 +21,11 @@
         }
         @if (_renameClause != 0)
         {
-            <RenameVariablePrompt variablesInClause=@(_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameClause))) CancelRenaming="RenameStop" Rename="e => RenameEnd(e.Source, e.Target)" />
+            <RenameVariablePrompt variablesInClause=@(ProofTools.ClauseVariables(_resolutionFlow.proof.GetClause((int)_renameClause))) CancelRenaming="RenameStop" Rename="e => RenameEnd(e.Source, e.Target)" />
         }
         @if (_proofImporterActive)
         {
-            <ProofImporter Import="ImportProof"/>
+            <ProofImporter Import="ImportProof" CancelImport="StopProofImport"/>
         }
         <table style="margin: auto; text-align:left;">
             <tbody>
@@ -46,7 +46,7 @@
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             <clause draggable="true"
                                     ondragover="event.preventDefault();"
-                                    style="@($"outline: {(_resolveTarget == i && _resolveTarget != _resolveSource ? "2px dashed orange" : _proofTools.IsEmptyClause(_resolutionFlow.proof.GetClause(i)) ? "1px solid white; background-color: green; color: white" : "1px solid gray")}")"
+                                    style="@($"outline: {(_resolveTarget == i && _resolveTarget != _resolveSource ? "2px dashed orange" : ProofTools.IsEmptyClause(_resolutionFlow.proof.GetClause(i)) ? "1px solid white; background-color: green; color: white" : "1px solid gray")}")"
                                     @ondragenter="e => SetResolveTarget(i)"
                                     @ondragstart="e => SetResolveSource(i)"
                                     @ondrop="e => StartResolution()">
@@ -63,11 +63,11 @@
                         </Animate>
                     </td>
                     @* Add 'rename' button to every clause with a variable *@
-                    @if (_proofTools.ClauseVariables(_resolutionFlow.proof.GetClause(i)).Count > 0)
+                    @if (ProofTools.ClauseVariables(_resolutionFlow.proof.GetClause(i)).Count > 0)
                     {
                         <td style="width=38px">
                             <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
-                                <button class="proofButton" @onclick="(e => RenameStart(i))">📝</button>
+                                <button class="symbolButton" @onclick="(e => RenameStart(i))">📝</button>
                             </Animate>
                         </td>
                     }
@@ -81,7 +81,7 @@
                     {
                         <td style="width=38px">
                             <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
-                                <button class="proofButton" @onclick="(e => Delete(i))">✖</button>
+                                <button class="symbolButton" @onclick="(e => Delete(i))">✖</button>
                             </Animate>
                         </td>
                     }
@@ -102,15 +102,15 @@
         </table>
 
         @* If the proof contians the empty clause, it is considered finished and the proof can be copied to the clipboard. *@
-        @if (_resolutionFlow.proof.Applications.Any(x => _proofTools.IsEmptyClause(x.GetClause())))
+        @if (_resolutionFlow.proof.Applications.Any(x => ProofTools.IsEmptyClause(x.GetClause())))
         {
             <button @onclick="e => CopyProof()">Copy verifiable proof to clipboard</button>
         }
 
         @* Import or export the proof *@
         <vertic>
-            <button class="proofButton" @onclick="(e => StartProofImport())">Import proof</button>
-            <button class="proofButton" @onclick="(e => ExportProof())">Export proof</button>
+            <button @onclick="(e => StartProofImport())">Import proof</button>
+            <button @onclick="(e => ExportProof())">Export proof</button>
         </vertic>
 
         @* Display error messages *@
@@ -147,7 +147,6 @@ else
 
 @code {
     ResolutionFlow? _resolutionFlow;
-    readonly ProofTools _proofTools = new(true);
 
     protected override void OnInitialized()
     {
@@ -238,7 +237,7 @@ else
         var leftClause = _resolutionFlow?.proof.GetClause(_resolveSource);
         var rightClause = _resolutionFlow?.proof.GetClause(_resolveTarget);
 
-        var result = _proofTools.Resolve(
+        var result = ProofTools.Resolve(
             _resolveSource,
             _resolveTarget,
             leftClause,
@@ -301,7 +300,7 @@ else
     private void RenameEnd(string source, string target)
     {
         var clauseUsedForRenaming = _resolutionFlow.proof.GetClause(_renameClause);
-        var rename = _proofTools.RenameVariable(source, target, _renameClause, clauseUsedForRenaming);
+        var rename = ProofTools.RenameVariable(source, target, _renameClause, clauseUsedForRenaming);
         _resolutionFlow.proof.Applications.Add(rename);
 
         RenameStop();
@@ -343,6 +342,12 @@ else
         StateHasChanged();
     }
 
+    private void StopProofImport()
+    {
+        _proofImporterActive = false;
+        StateHasChanged();
+    }
+
     /// <summary>
     /// Returns a JSON serialization of the proof
     /// </summary>
@@ -361,8 +366,7 @@ else
     {
         var proof = Serializer.ImportProof(input);
         _resolutionFlow.proof = proof;
-        _proofImporterActive = false;
-        StateHasChanged();
+        StopProofImport();
     }
     #endregion
 
