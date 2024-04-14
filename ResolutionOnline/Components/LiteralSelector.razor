@@ -9,32 +9,32 @@
                     These clauses clash on multiple literals
                 </di>
                 <di style="text-align: right">
-                    <button class="proofButton" @onclick=CancelResolution>✖</button>
+                    <button class="symbolButton" @onclick=CancelResolution>✖</button>
                 </di>
             </div>
             Select the two literals to resolve on
             <vertic>
                 @foreach (var literal in LeftLiterals)
                 {
-                    <fol @onclick="e => AlterLiteralSelection(LeftSelectedLiterals, literal)"
+                    <clause @onclick="e => AlterLiteralSelection(LeftSelectedLiterals, literal)"
                          style="@($"outline: {(LeftSelectedLiterals.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
                         @((MarkupString)literal.Print())
-                    </fol>
+                    </clause>
                 }
             </vertic>
             <vertic>
                 @foreach (var literal in RightLiterals)
                 {
-                    <fol @onclick="e => AlterLiteralSelection(RightSelectedLiterals, literal)"
+                    <clause @onclick="e => AlterLiteralSelection(RightSelectedLiterals, literal)"
                          style="@($"outline: {(RightSelectedLiterals.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
                         @((MarkupString)literal.Print())
-                    </fol>
+                    </clause>
                 }
             </vertic>
             <vertic>
                 @if (LeftSelectedLiterals.Count != 0 && RightSelectedLiterals.Count != 0)
                 {
-                    <button class="proofButton" @onclick=@(e => Resolve.InvokeAsync(this))>Resolve</button>
+                    <button @onclick=@(e => Resolve.InvokeAsync(this))>Resolve</button>
                 }
             </vertic>
         </div>

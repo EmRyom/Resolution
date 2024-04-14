@@ -158,7 +158,11 @@ clause {
     border-radius: 8px;
 }
 
-.proofButton {
+clause + clause {
+    margin-left : 10px
+}
+
+.symbolButton {
     background-color: white;
     color: red;
     border-radius: 4px;

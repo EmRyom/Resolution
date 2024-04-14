@@ -8,17 +8,17 @@
 
 <center> 
     <h1>Enter your formula</h1>
-    <EditForm Model="@_resolutionFlow" OnSubmit="@Skip">
+    <EditForm Model="@_resolutionFlow" OnSubmit="@GoToResolver">
         <vertic>
             <tt>
-                <InputText id="name" style="width: 450px;" type="code" @bind-Value="_bin" @oninput="Enter"/>
+                <InputText id="name" style="width: 450px;" type="code" @bind-Value="_bin" @oninput="Input"/>
             </tt>
         </vertic>
         <vertic>
             @((MarkupString)_resolutionFlow.PrintParsed(_parser, _clauseConverter))
         </vertic>
         <vertic>
-            <button type="button" @onclick="Alternative">See conversion to clausal form</button>
+            <button type="button" @onclick="GoToClauseConverter">See conversion to clausal form</button>
             <button type="submit">Skip conversion</button>
         </vertic>
     </EditForm>
@@ -31,21 +31,21 @@
 
     string _bin = "Imp (Uni x. (Imp p[x] q[x])) (Imp (Exi x. p[x]) (Exi x. q[x]))";
 
-    private void Skip()
+    private void GoToResolver()
     {
         _resolutionFlow.Convert(_clauseConverter);
         ResolutionFlowContainer.Value = _resolutionFlow;
         NavManager.NavigateTo("/resolver");
     }
 
-    private void Alternative()
+    private void GoToClauseConverter()
     {
         _resolutionFlow.Convert(_clauseConverter);
         ResolutionFlowContainer.Value = _resolutionFlow;
         NavManager.NavigateTo("/converter");
     }
     
-    private void Enter(ChangeEventArgs eventArgs)
+    private void Input(ChangeEventArgs eventArgs)
     {
         _resolutionFlow.toParse = eventArgs.Value as string;
         StateHasChanged();

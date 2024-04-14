@@ -3,11 +3,24 @@
 <div class="overlay">
     <div class="selector">
         <div style="padding: 10px">
-            <EditForm OnSubmit="e => Import.InvokeAsync(ProofToImport)" Model="@this">
-                <InputText @bind-Value="@ProofToImport" @oninput="e => StateHasChanged()" />
+            <div>
+                <di style="text-align: left">
+                    Import proof from JSON
+                </di>
+                <di style="text-align: right">
+                    <button class="symbolButton" @onclick="e => CancelImport.InvokeAsync()" >✖</button>
+                </di>
+            </div>
+            <div style="padding: 10px">
+                <EditForm OnSubmit="e => Import.InvokeAsync(ProofToImport)" Model="@this">
+                    <InputText @bind-Value="@ProofToImport" @oninput="Input" />
 
-                <button type="submit">Import</button>
-            </EditForm>
+                    @if (string.IsNullOrEmpty(ProofToImport) == false)
+                    {
+                        <button type="submit">Import</button>
+                    }
+                </EditForm>
+            </div>
         </div>
     </div>
 </div>
@@ -16,5 +29,14 @@
     [Parameter]
     public EventCallback<string> Import { get; set; }
 
+    [Parameter]
+    public EventCallback CancelImport { get; set; }
+
     public string ProofToImport = string.Empty;
+
+    private void Input(ChangeEventArgs eventArgs)
+    {
+        ProofToImport = eventArgs.Value as string;
+        StateHasChanged();
+    }
 }
