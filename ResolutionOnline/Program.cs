@@ -8,6 +8,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<ResolutionFlowContainer>();
 builder.Services.AddScoped<IClipboardService, ClipboardService>();
+builder.Services.AddBlazorBootstrap();
 
 var app = builder.Build();
 
@@ -28,5 +29,7 @@ app.UseRouting();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
-app.Run();
-//app.Run("http://0.0.0.0:8080");
+// For local testing:
+//app.Run();
+// For raspberry pi server
+app.Run("http://0.0.0.0:8080");

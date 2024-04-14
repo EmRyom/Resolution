@@ -28,7 +28,6 @@
     ResolutionFlow? _resolutionFlow;
     readonly Parser _parser = new(false);
     readonly ClauseConverter _clauseConverter = new(false);
-    readonly ProofTools _proofTools = new(false);
 
     string _bin = "Imp (Uni x. (Imp p[x] q[x])) (Imp (Exi x. p[x]) (Exi x. q[x]))";
 
