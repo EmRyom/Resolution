@@ -21,12 +21,6 @@
                 <span class="oi oi-list-rich" aria-hidden="true"></span> Resolver
             </NavLink>
         </div>
-        @*<div class="nav-item px-3">
-            <button @onclick="Copy" class="btn btn-primary">Copy Proof to Clipboard</button>
-        </div>*@
-        @*<div class="nav-item px-3">
-            <button @onclick="OnClick" class="btn btn-primary">Change Value</button>
-        </div>*@
     </nav>
 </div>
 
@@ -38,17 +32,5 @@
     private void ToggleNavMenu()
     {
         _collapseNavMenu = !_collapseNavMenu;
-    }
-
-    [Parameter]
-    public string TextToCopy { get; set; } = "Not yet";
-    private async Task Copy()
-    {
-        await ClipboardService.CopyToClipboard(TextToCopy);
-    }
-
-    private void OnClick()
-    {
-        TextToCopy = "Here";
     }
 }
