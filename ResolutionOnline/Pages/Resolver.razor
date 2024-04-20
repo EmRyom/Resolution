@@ -27,15 +27,16 @@
         }
         <table style="margin: auto; text-align:left;">
             <tbody>
-            @for (int index = 0; index < _resolutionFlow.proof.Applications.Count; index++)
+            @for (int pointer = 1; pointer < _resolutionFlow.proof.Applications.Count + 1; pointer++)
             {
-                var i = 1 + index;
+                // Index separate from pointer necessary as pointer is unreliable
+                var index = pointer;
                 <tr>
                     @* Display clause number *@
                     <td style="color: black">
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             <math>
-                                @((MarkupString)$"<i>C<sub>{i}</sub> =")
+                                @((MarkupString)$"<i>C<sub>{index}</sub> =")
                             </math>
                         </Animate>
                     </td>
@@ -44,12 +45,12 @@
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             <clause draggable="true"
                                     ondragover="event.preventDefault();"
-                                    style="@($"outline: {(_resolveTarget == i && _resolveTarget != _resolveSource ? "2px dashed orange" : ProofTools.IsEmptyClause(_resolutionFlow.proof.GetClause(i)) ? "1px solid white; background-color: green; color: white" : "1px solid gray")}")"
-                                    @ondragenter="e => SetResolveTarget(i)"
-                                    @ondragstart="e => SetResolveSource(i)"
+                                    style="@("outline: " + DeterminteClauseStyling(index))"
+                                    @ondragenter="e => SetResolveTarget(index)"
+                                    @ondragstart="e => SetResolveSource(index)"
                                     @ondrop="e => StartResolution()">
                                 <div style="text-align: center;">
-                                    @((MarkupString)_resolutionFlow.proof.GetClause(i).Print())
+                                    @((MarkupString)_resolutionFlow.proof.GetClause(index).Print())
                                 </div>
                             </clause>
                         </Animate>
@@ -57,15 +58,15 @@
                     @* Display clause obtaining operation *@
                     <td style="text-align: left; color: black">
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
-                            @((MarkupString)("<i>, " + _resolutionFlow.proof.Applications[i - 1].PrintMethod()))
+                            @((MarkupString)("<i>, " + _resolutionFlow.proof.Applications[index - 1].PrintMethod()))
                         </Animate>
                     </td>
                     @* Add 'rename' button to every clause with a variable *@
-                    @if (ProofTools.ClauseVariables(_resolutionFlow.proof.GetClause(i)).Count > 0)
+                    @if (ProofTools.ClauseVariables(_resolutionFlow.proof.GetClause(index)).Count > 0)
                     {
                         <td style="width=38px">
                             <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
-                                <button class="symbolButton" @onclick="(e => RenameStart(i))">📝</button>
+                                <button class="symbolButton" @onclick="(e => RenameStart(index))">📝</button>
                             </Animate>
                         </td>
                     }
@@ -75,11 +76,11 @@
                         </td>
                     }
                     @* Add 'delete' button to every applicaiton that permits it *@
-                    @if (!_resolutionFlow.proof.MustKeepApplication(i))
+                    @if (!_resolutionFlow.proof.MustKeepApplication(index))
                     {
                         <td style="width=38px">
                             <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
-                                <button class="symbolButton" @onclick="(e => Delete(i))">✖</button>
+                                <button class="symbolButton" @onclick="(e => Delete(index))">✖</button>
                             </Animate>
                         </td>
                     }
@@ -91,7 +92,7 @@
                     @* Display substitutions relevant to clause *@
                     <td style="text-align: left; color: black">
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
-                            @((MarkupString)(_resolutionFlow.proof.Applications[i - 1].PrintSubstitutions()))
+                            @((MarkupString)(_resolutionFlow.proof.Applications[index - 1].PrintSubstitutions()))
                         </Animate>
                     </td>
                 </tr>
@@ -135,6 +136,34 @@ else
         // Update the state 
         ResolutionFlowContainer.OnStateChange += StateHasChanged;
         _resolutionFlow = ResolutionFlowContainer.Value;
+    }
+
+    /// <summary>
+    /// To make the clauses look different depending on the state of the proof.
+    /// </summary>
+    /// <param name="index"></param>
+    /// <returns></returns>
+    private string DeterminteClauseStyling(int index)
+    {
+        var emptyClauseStyling = "1px solid white; background-color: green; color: white";
+        var defaultClauseStyling = "1px solid gray";
+        var leftClauseStyling = "2px dashed cornflowerblue";
+        var rightClauseStyling = "2px dashed orange";
+
+        // If the clause is empty, make it green to indicate that the proof is finished
+        if (ProofTools.IsEmptyClause(_resolutionFlow.proof.GetClause(index)))
+            return emptyClauseStyling;
+        
+        // If the clase is dragged, outline it in blue 
+        if (_resolveSource == index)
+            return leftClauseStyling;
+        
+        // If the clause is hovered over, outline it in orange
+        if (_resolveTarget == index)
+            return rightClauseStyling;
+        
+        // Default clause
+        return defaultClauseStyling;
     }
 
     // Front end triggers
