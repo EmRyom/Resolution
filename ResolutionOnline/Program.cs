@@ -1,5 +1,4 @@
 using ResolutionOnline.Data;
-using static ResolutionOnline.Clipboard;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,7 +6,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<ResolutionFlowContainer>();
-builder.Services.AddScoped<IClipboardService, ClipboardService>();
 builder.Services.AddBlazorBootstrap();
 builder.WebHost.UseStaticWebAssets();
 

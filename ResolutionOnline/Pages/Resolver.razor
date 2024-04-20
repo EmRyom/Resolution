@@ -5,8 +5,8 @@
 @inject NavigationManager NavigationManager
 @inject ResolutionFlowContainer ResolutionFlowContainer
 @using BlazorAnimate
-@inject Clipboard.IClipboardService ClipboardService
 @using ResolutionOnline.Components;
+@inject IJSRuntime JSRuntime;
 
 <h3>Resolver</h3>
 
@@ -344,10 +344,10 @@ else
     /// Returns a JSON serialization of the proof
     /// </summary>
     /// <returns></returns>
-    private void ExportProof()
+    private async void ExportProof()
     {
         var proof = Serializer.Export(_resolutionFlow.toParse, _resolutionFlow.proof);
-        ClipboardService.CopyToClipboard(proof.ToString());
+        await JSRuntime.InvokeAsync<string>("copyToClipBoard", proof.ToString());
 
         messages.Add(new ToastMessage
             {

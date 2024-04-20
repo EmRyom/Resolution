@@ -7,4 +7,15 @@
 <script src="_content/BlazorAnimate/blazorAnimateInterop.js"></script>
 <link href="_content/Blazor.Bootstrap/Blazor.Bootstrap.bundle.scp.css" rel="stylesheet" />
 
+<script>
+    function copyToClipBoard(text) {
+        navigator.clipboard.writeText(text).then(function () {
+            console.log("Copied to clipboard!");
+        })
+        .catch(function (error) {
+            console.log(error);
+        });
+    } 
+</script>
+
 <component type="typeof(App)" render-mode="ServerPrerendered" />
