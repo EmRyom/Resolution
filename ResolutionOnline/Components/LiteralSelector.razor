@@ -6,18 +6,17 @@
         <div style="padding: 10px">
             <div>
                 <di style="text-align: left">
-                    These clauses clash on multiple literals
+                    Select all literals to resolve on
                 </di>
                 <di style="text-align: right">
                     <button class="symbolButton" @onclick=CancelResolution>✖</button>
                 </di>
             </div>
-            Select the two literals to resolve on
             <vertic>
                 @foreach (var literal in LeftLiterals)
                 {
                     <clause @onclick="e => AlterLiteralSelection(LeftSelectedLiterals, literal)"
-                         style="@($"outline: {(LeftSelectedLiterals.Contains(literal) ? "2px dashed orange" : "1px solid gray")}")">
+                            style="@($"outline: {(LeftSelectedLiterals.Contains(literal) ? "2px dashed cornflowerblue" : "1px solid gray")}")">
                         @((MarkupString)literal.Print())
                     </clause>
                 }
@@ -70,6 +69,20 @@
         else
         {
             selectedLiterals.Add(alteringLiteral);
+        }
+    }
+
+    /// <summary>
+    /// Skip the selection step in case there's only one literal per clause
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (LeftLiterals.Count == 1 && RightLiterals.Count == 1)
+        {
+            LeftSelectedLiterals = LeftLiterals.ToHashSet();
+            RightSelectedLiterals = RightLiterals.ToHashSet();
+            Resolve.InvokeAsync(this);
         }
     }
 }
