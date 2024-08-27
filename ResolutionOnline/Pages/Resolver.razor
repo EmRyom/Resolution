@@ -47,7 +47,7 @@
                                     ondragover="event.preventDefault();"
                                     style="@("outline : " + DetermineClauseStyling(index))"
                                     @ondragenter="e => SetResolveTarget(index)"
-                                    @ondragend="e => ResetResolve()"
+                                    @ondragend="e => HandleDragEnd()"
                                     @ondragstart="e => SetResolveSource(index)"
                                     @ondrop="e => StartResolution()">
                                 <div style="text-align: center;">
@@ -154,15 +154,15 @@ else
         // If the clause is empty, make it green to indicate that the proof is finished
         if (ProofTools.IsEmptyClause(_resolutionFlow.proof.GetClause(index)))
             return emptyClauseStyling;
-        
+
         // If the clase is dragged, outline it in blue 
         if (_resolveSource == index)
             return leftClauseStyling;
-        
+
         // If the clause is hovered over, outline it in orange
         if (_resolveTarget == index)
             return rightClauseStyling;
-        
+
         // Default clause
         return defaultClauseStyling;
     }
@@ -220,6 +220,20 @@ else
         _resolveSource = 0;
         _resolveTarget = 0;
         _literalSelectorActive = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Return to initial state unless a literal selector is active 
+    /// </summary>
+    private void HandleDragEnd()
+    {
+        if (_literalSelectorActive)
+        {
+            return;
+        }
+        _resolveTarget = 0;
+        _resolveSource = 0;
         StateHasChanged();
     }
     #endregion
