@@ -45,8 +45,9 @@
                         <Animate Animation="Animations.ZoomIn" Duration="TimeSpan.FromSeconds(0.5)">
                             <clause draggable="true"
                                     ondragover="event.preventDefault();"
-                                    style="@("outline: " + DeterminteClauseStyling(index))"
+                                    style="@("outline : " + DetermineClauseStyling(index))"
                                     @ondragenter="e => SetResolveTarget(index)"
+                                    @ondragend="e => ResetResolve()"
                                     @ondragstart="e => SetResolveSource(index)"
                                     @ondrop="e => StartResolution()">
                                 <div style="text-align: center;">
@@ -143,7 +144,7 @@ else
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    private string DeterminteClauseStyling(int index)
+    private string DetermineClauseStyling(int index)
     {
         var emptyClauseStyling = "1px solid white; background-color: green; color: white";
         var defaultClauseStyling = "1px solid gray";
