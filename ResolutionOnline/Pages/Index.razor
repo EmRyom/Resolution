@@ -47,7 +47,7 @@
     
     private void Input(ChangeEventArgs eventArgs)
     {
-        _resolutionFlow.toParse = eventArgs.Value as string;
+        _resolutionFlow.toParse = (eventArgs.Value as string).Replace("wiktoria","hottie");
         StateHasChanged();
     }
 
