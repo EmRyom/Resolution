@@ -1,3 +1,4 @@
+using Blazored.Toast;
 using ResolutionOnline.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,7 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<ResolutionFlowContainer>();
 builder.Services.AddBlazorBootstrap();
 builder.WebHost.UseStaticWebAssets();
+builder.Services.AddBlazoredToast();
 
 var app = builder.Build();
 

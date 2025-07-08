@@ -7,6 +7,8 @@
 @using BlazorAnimate
 @using ResolutionOnline.Components;
 @inject IJSRuntime JSRuntime;
+@inject IToastService toastService;
+@using Blazored.Toast.Configuration;
 
 <h3>Resolver</h3>
 
@@ -47,7 +49,7 @@
                                     ondragover="event.preventDefault();"
                                     style="@("outline : " + DetermineClauseStyling(index))"
                                     @ondragenter="e => SetResolveTarget(index)"
-                                    @ondragend="e => HandleDragEnd()"
+                                    @ondragend="e => CheckDropAndResetResolve()"
                                     @ondragstart="e => SetResolveSource(index)"
                                     @ondrop="e => StartResolution()">
                                 <div style="text-align: center;">
@@ -114,9 +116,9 @@
         </vertic>
 
         @* Display error messages *@
-        <Toasts class="p-3" Messages="messages" AutoHide="true" Delay="6000" Placement="ToastsPlacement.TopRight" />
-
-        
+        <BlazoredToasts Position="ToastPosition.TopRight"
+                        Timeout="10"
+                        ShowProgressBar="false" />
     </div>
 }
 else
@@ -224,9 +226,9 @@ else
     }
 
     /// <summary>
-    /// Return to initial state unless a literal selector is active 
+    /// Return to initial state unless a literal selector is active
     /// </summary>
-    private void HandleDragEnd()
+    private void CheckDropAndResetResolve()
     {
         if (_literalSelectorActive)
         {
@@ -278,13 +280,8 @@ else
         }
         else
         {
-            messages.Add(new ToastMessage
-                {
-                    Type = ToastType.Danger,
-                    Title = "Error",
-                    HelpText = $"{DateTime.Now}",
-                    Message = result.Error.message,
-                });
+            // Show error
+            toastService.ShowInfo(@<div>@(new MarkupString(result.Error.message.ToString()))</div>);
         }
 
         ResetResolve();
@@ -364,11 +361,7 @@ else
         var proof = Serializer.Export(_resolutionFlow.toParse, _resolutionFlow.proof);
         await JSRuntime.InvokeAsync<string>("copyToClipBoard", proof.ToString());
 
-        messages.Add(new ToastMessage
-            {
-                Type = ToastType.Success,
-                Message = $"Copied proof to clipboard.",
-            });
+        toastService.ShowToast(ToastLevel.Info, "Copied proof JSON to clipboard.");
     }
 
     /// <summary>
@@ -382,8 +375,5 @@ else
         StopProofImport();
     }
     #endregion
-
-    List<ToastMessage> messages = new List<ToastMessage>();
-
 }
 
