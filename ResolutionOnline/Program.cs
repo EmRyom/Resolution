@@ -33,4 +33,4 @@ app.MapFallbackToPage("/_Host");
 // For local testing
 //app.Run();
 // For raspberry pi server
-app.Run("http://0.0.0.0:8080");
+app.Run("http://0.0.0.0:1447");
