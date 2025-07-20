@@ -1,0 +1,4 @@
+session "Resolution_FOL" = "HOL-Library" +
+  options [document = false]
+  theories
+    IsabelleConnector

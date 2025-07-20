@@ -1,0 +1,1 @@
+﻿Download and extract https://www.isa-afp.org/entries/Resolution_FOL.html into this directory.

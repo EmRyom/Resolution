@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resolution_FOL\Completeness.thy" />
+    <None Remove="Resolution_FOL\Completeness_Instance.thy" />
+    <None Remove="Resolution_FOL\Examples.thy" />
+    <None Remove="Resolution_FOL\Resolution.thy" />
+    <None Remove="Resolution_FOL\ROOT" />
+    <None Remove="Resolution_FOL\TermsAndLiterals.thy" />
+    <None Remove="Resolution_FOL\Tree.thy" />
+    <None Remove="Resolution_FOL\Unification_Theorem.thy" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Resolution_FOL\Completeness.thy">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resolution_FOL\Completeness_Instance.thy">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resolution_FOL\Examples.thy">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resolution_FOL\Resolution.thy">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resolution_FOL\ROOT">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resolution_FOL\TermsAndLiterals.thy">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resolution_FOL\Tree.thy">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resolution_FOL\Unification_Theorem.thy">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
