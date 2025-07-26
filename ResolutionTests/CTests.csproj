@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\IsabelleConnector\IsabelleConnector.csproj" />
     <ProjectReference Include="..\Resolution\Resolution.csproj" />
     <ProjectReference Include="..\Isabelle\Isabelle.fsproj" />
   </ItemGroup>
