@@ -331,12 +331,16 @@ else
     #endregion
 
     /// <summary>
-    /// DISABLED Summons the Isabelle proof generator to generate the formally verifiable proof, then copies to the clipboard.
+    /// Summons the Isabelle proof generator to generate the formally verifiable proof, then copies to the clipboard.
     /// </summary>
-    private void CopyProof()
+    private async void CopyProof()
     {
-        var c = new Isabelle.AST.Connector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
-        //ClipboardService.CopyToClipboard(Isabelle.Generator.generateSingle(c.x.Item1, c.x.Item2));
+        var c = new Isabelle.ProofAST.Connector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
+        
+        await JSRuntime.InvokeAsync<string>("copyToClipBoard", Isabelle.Generator2.writeProof(c.x));
+
+        toastService.ShowToast(ToastLevel.Info, "Copied Isabelle proof to clipboard.");
+
     }
 
     #region Proof Import/Export
