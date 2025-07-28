@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
+﻿using System.Diagnostics;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace IsabelleConnector;
 
@@ -12,6 +7,13 @@ public class Executor
 {
     // Path to local isabelle installation.
     private readonly string isabellePath;
+
+    private const string rootFile = """
+session "Resolution_FOL" = "HOL-Library" +
+  options [document = false]
+  theories
+    IsabelleConnector
+""";
 
     public Executor(string isabellePath)
     {
@@ -31,9 +33,14 @@ public class Executor
                 File.Copy(file, destFile, overwrite: true);
             }
         }
+
+        if (!File.Exists($"{targetFullPath}/ROOT"))
+        {
+            File.WriteAllText($"{targetFullPath}/ROOT", rootFile);
+        }
     }
 
-    public void Execute(string proof)
+    public string Execute(string proof)
     {
         string filePath = $"{isabellePath}/Resolution_FOL/IsabelleConnector.thy";
         string content = $"theory IsabelleConnector imports Resolution begin \n{proof} \nend";
@@ -48,7 +55,6 @@ public class Executor
                @"^([A-Za-z]):\\",
                m => $"/cygdrive/{m.Groups[1].Value.ToLower()}/"
            ).Replace("\\", "/");
-
 
         string proofDir = $"{isabelleHome}/Resolution_FOL";
 
@@ -70,9 +76,9 @@ public class Executor
         {
             string output = process.StandardOutput.ReadToEnd();
             string error = process.StandardError.ReadToEnd();
+
             process.WaitForExit();
-
+            return output + error;
         }
-
     }
 }
