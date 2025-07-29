@@ -1,7 +1,7 @@
 ﻿namespace Isabelle
 
 open Resolution
-open AST
+open ProofAST
 
 // This module converts the proofs from the Proof.cs type to AST.fs type
 module Compiler =

@@ -1,6 +1,6 @@
 ﻿namespace Isabelle 
 
-module AST =
+module ProofAST =
 
     type ident = string
     and oldname = ident
@@ -25,5 +25,10 @@ module AST =
         | Rename  of clauseRef * Clause * oldname * newname 
 
     type Proof = Application list 
+
+    type IsabelleProof = 
+        Literal List * // Definitions at the start of proof
+        Unifier List * // Subproofs
+        Application List // Applications as regular
 
     type Connector = { x: Proof }

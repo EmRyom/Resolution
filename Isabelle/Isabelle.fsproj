@@ -6,10 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="AST.fs" />
+    <Compile Include="ProofAST.fs" />
     <Compile Include="Compiler.fs" />
     <Compile Include="Example.fs" />
     <Compile Include="Generator.fs" />
+    <Compile Include="Generator2.fs" />
     <Compile Include="Connector.fs" />
   </ItemGroup>
 

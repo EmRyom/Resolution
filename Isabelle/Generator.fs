@@ -1,6 +1,6 @@
 ﻿namespace Isabelle
 
-open AST
+open ProofAST
 
 module Generator =
        
@@ -286,9 +286,7 @@ theorem resolution_rule':
         
 //    let generateSingle (proof:Proof) =
 //        let (atoms, mgus, text) = generate proof 
-//        "theory test imports Resolution begin\n" +
-//        emptyMgu + defineAtoms atoms + (mgus |> mguProofs |> String.concat "\n\n") + "\nlemma Proof_1:" + text +
-//        "\nend"
+//        emptyMgu + defineAtoms atoms + (mgus |> mguProofs |> String.concat "\n\n") + "\nlemma Proof_1:" + text
 
 //    let generateMultiple (ps:Proof list):string =
 //        let genned = List.map generate ps  
