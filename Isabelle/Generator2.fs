@@ -8,23 +8,23 @@ module Generator2 =
 
     let preamble = """
 theorem empty_mgu: 
-    assumes "unifier⇩l⇩s ε L"
-    shows "mgu⇩l⇩s ε L"
-using assms unfolding unifier⇩l⇩s_def mgu⇩l⇩s_def apply auto
+  assumes "unifier\<^sub>l\<^sub>s \<epsilon> L"
+  shows "mgu\<^sub>l\<^sub>s \<epsilon> L"
+using assms unfolding unifier\<^sub>l\<^sub>s_def mgu\<^sub>l\<^sub>s_def apply auto
 apply (rule_tac x=u in exI)
 using empty_comp1 empty_comp2 apply auto
 done
 
-theorem unifier_single: "unifier⇩l⇩s σ {l}" 
-unfolding unifier⇩l⇩s_def by auto
+theorem unifier_single: "unifier\<^sub>l\<^sub>s \<sigma> {l}" 
+unfolding unifier\<^sub>l\<^sub>s_def by auto
 
 theorem resolution_rule':
-    assumes "C⇩1 ∈ Cs"
-    assumes "C⇩2 ∈ Cs"
-    assumes "applicable C⇩1 C⇩2 L⇩1 L⇩2 σ"
-    assumes "C = {resolution C⇩1 C⇩2 L⇩1 L⇩2 σ}"
-    shows "resolution_step Cs (Cs ∪ C)"
-    using assms resolution_rule by auto
+  assumes "C\<^sub>1 \<in> Cs"
+  assumes "C\<^sub>2 \<in> Cs"
+  assumes "applicable C\<^sub>1 C\<^sub>2 L\<^sub>1 L\<^sub>2 \<sigma>"
+  assumes "C = {resolution C\<^sub>1 C\<^sub>2 L\<^sub>1 L\<^sub>2 \<sigma>}"
+  shows "resolution_step Cs (Cs \<union> C)"
+  using assms resolution_rule by auto
 
 
 """
@@ -74,9 +74,9 @@ theorem resolution_rule':
 
         let defineLiteral((ident, args, sign):Literal):string = 
             let fullIdent = literalIdentifier (ident, args, sign)
-            "definition " + fullIdent + " :: ‹fterm literal› where\n" +
-            "  ‹" + fullIdent + " = " + (if sign then "Pos" else "Neg") +
-            " ''" + ident + "'' [" + defineArguments args + "]›\n\n"
+            "definition " + fullIdent + " :: \"fterm literal\" where\n" +
+            "  \"" + fullIdent + " = " + (if sign then "Pos" else "Neg") +
+            " ''" + ident + "'' [" + defineArguments args + "]\"\n\n"
 
         match literals with
         | literal::tail -> defineLiteral literal + defineLiterals tail
