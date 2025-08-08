@@ -265,8 +265,9 @@ lemma resolution_example2_sem: "\<not>eval\<^sub>c\<^sub>s F G {{Nb,Na},{Pax},{P
   using resolution_example2 derivation_sound_refute by auto
 
 """;
-        
-        Console.WriteLine(executor.Execute(proof));
+
+        var actualResult = executor.Execute(proof);
+        Assert.DoesNotContain("FAILED", actualResult.ToUpper());
     }
 
     [TestMethod]
@@ -529,7 +530,8 @@ lemma resolution_example2_sem: "\<not>eval\<^sub>c\<^sub>s F G {{Nb,Na},{Pax},{P
   using resolution_example2 derivation_sound_refute by auto
     
 """;
-        
-        Console.WriteLine(executor.Execute(proof));
+        var expectedResult = "At command \"done\" (line 226 of \"~~/Resolution_FOL/IsabelleConnector.thy\")\nUnfinished session(s): Resolution_FOL";
+        var actualResult = executor.Execute(proof);
+        Assert.Contains(expectedResult, actualResult);
     }
 }
