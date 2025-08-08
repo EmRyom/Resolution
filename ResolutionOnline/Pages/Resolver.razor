@@ -109,11 +109,16 @@
             <button @onclick="e => CopyProof()">Copy verifiable proof to clipboard</button>
         }
 
-        @* Import or export the proof *@
+
+
+        @* Run, import or export the proof *@
         <vertic>
+            <button @onclick="e => RunIsabelleProof()">RunIsabelleProof</button>
             <button @onclick="(e => StartProofImport())">Import proof</button>
             <button @onclick="(e => ExportProof())">Export proof</button>
         </vertic>
+
+        @("Isabelle proof result run on server: \n" + isabelleProofResult)
 
         @* Display error messages *@
         <BlazoredToasts Position="ToastPosition.TopRight"
@@ -134,11 +139,17 @@ else
 @code {
     ResolutionFlow? _resolutionFlow;
 
+    IsabelleConnector.Executor Executor;
+
+    string isabelleProofResult = "";
+
     protected override void OnInitialized()
     {
         // Update the state 
         ResolutionFlowContainer.OnStateChange += StateHasChanged;
         _resolutionFlow = ResolutionFlowContainer.Value;
+
+        this.Executor = new IsabelleConnector.Executor(@"C:\Users\emman\Desktop\Isabelle\Isabelle2025");
     }
 
     /// <summary>
@@ -341,6 +352,21 @@ else
 
         toastService.ShowToast(ToastLevel.Info, "Copied Isabelle proof to clipboard.");
 
+    }
+
+    private async void RunIsabelleProof()
+    {
+        toastService.ShowToast(ToastLevel.Info, $"Running Isabelle proof...");
+
+        var c = new Isabelle.ProofAST.Connector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
+
+        var isabelleProof = Isabelle.Generator2.writeProof(c.x);
+
+        isabelleProofResult = this.Executor.Execute(isabelleProof);
+
+        toastService.ShowToast(ToastLevel.Info, $"Isabelle proof result ready.");
+
+        StateHasChanged();
     }
 
     #region Proof Import/Export
