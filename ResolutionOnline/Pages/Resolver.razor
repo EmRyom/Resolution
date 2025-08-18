@@ -149,7 +149,7 @@ else
         ResolutionFlowContainer.OnStateChange += StateHasChanged;
         _resolutionFlow = ResolutionFlowContainer.Value;
 
-        this.Executor = new IsabelleConnector.Executor(@"C:\Users\emman\Desktop\Isabelle\Isabelle2025");
+        this.Executor = new IsabelleConnector.Executor(@"C:\Isabelle2025");
     }
 
     /// <summary>
@@ -362,10 +362,16 @@ else
 
         var isabelleProof = Isabelle.Generator2.writeProof(c.x);
 
-        isabelleProofResult = this.Executor.Execute(isabelleProof);
+        var thread = new Thread(() => {
+            isabelleProofResult = this.Executor.Execute(isabelleProof);
 
-        toastService.ShowToast(ToastLevel.Info, $"Isabelle proof result ready.");
+            toastService.ShowToast(ToastLevel.Info, $"Isabelle proof result ready.");
 
+            InvokeAsync(StateHasChanged); 
+        });
+
+        thread.Start();
+        
         StateHasChanged();
     }
 
