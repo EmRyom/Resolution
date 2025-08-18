@@ -84,11 +84,41 @@ theorem resolution_rule':
 
     let writeProof(proof:Proof):string =
 
-        let writeApplications(apps:Application List):string = ""
+        let writeApplications(apps:Application List):string = 
+            let rec generateLiterals(literals: Literal List):string =
+                match literals with 
+                | head::[] -> literalIdentifier head
+                | head::tail -> literalIdentifier head + "," + generateLiterals tail
+                | [] -> ""
+            let rec generateClauses(clauses: Clause List):string =
+                match clauses with 
+                | head::[] -> "{" + generateLiterals (Set.toList head) + "}"
+                | head::tail -> "{" + generateLiterals (Set.toList head) + "}," + generateClauses tail
+                | [] -> "{}"
+            let writeLemma(apps:Application List):string =
+                let rec getCopyClauses = function 
+                    | Copy(x)::tail -> x::getCopyClauses tail
+                    | _::tail -> getCopyClauses tail
+                    | [] -> []
+                let rec getAllClauses = function 
+                    | Copy(x)::tail -> x::getAllClauses tail
+                    | Resolve(_,_,x,_)::tail -> x::getAllClauses tail
+                    | Rename(_,x,_,_)::tail -> x::getAllClauses tail
+                    | [] -> []
+                "lemma " + "ResolutionProof" + ":\n" +
+                "  \"resolution_deriv {" + generateClauses (getCopyClauses apps) + "}\n" +
+                "                     {" + generateClauses (getAllClauses apps) + "}\"\n"
+
+            writeLemma apps
+
+
+
+        let writeUnifiers(unifiers:Unifier List):string = ""
 
         let (literals, unifiers, proof) = initializeProof proof
         preamble +
         defineLiterals literals +
+        writeUnifiers unifiers +
         writeApplications proof
         
 
