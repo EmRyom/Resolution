@@ -30,7 +30,10 @@ session "Resolution_FOL" = "HOL-Library" +
             {
                 string fileName = Path.GetFileName(file);
                 string destFile = Path.Combine(targetFullPath, fileName);
-                File.Copy(file, destFile, overwrite: true);
+                if (!file.ToUpper().Contains("ROOT"))
+                {
+                    File.Copy(file, destFile, overwrite: true);
+                }
             }
         }
 

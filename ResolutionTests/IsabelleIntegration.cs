@@ -3,7 +3,7 @@
 [TestClass]
 public class TestRunner
 {
-    Executor executor = new Executor(@"C:\Users\emman\Desktop\Isabelle\Isabelle2025");
+    Executor executor = new Executor(@"C:\Isabelle2025");
 
     [TestMethod]
     public void ExampleValid()
