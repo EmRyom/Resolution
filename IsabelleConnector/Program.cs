@@ -3,7 +3,7 @@
 
 using IsabelleConnector;
 
-var executor = new Executor(@"C:\Users\emman\Desktop\Isabelle\Isabelle2025");
+var executor = new Executor(@"C:\Isabelle2025");
 
 
 executor.Execute("");

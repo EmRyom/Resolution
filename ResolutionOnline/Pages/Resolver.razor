@@ -106,19 +106,21 @@
         @* If the proof contians the empty clause, it is considered finished and the proof can be copied to the clipboard. *@
         @if (_resolutionFlow.proof.Applications.Any(x => ProofTools.IsEmptyClause(x.GetClause())))
         {
-            <button @onclick="e => CopyProof()">Copy verifiable proof to clipboard</button>
         }
 
 
 
         @* Run, import or export the proof *@
         <vertic>
-            <button @onclick="e => RunIsabelleProof()">Run Isabelle Proof</button>
+            <button @onclick="e => CopyProof()">Copy Isabelle proof to clipboard</button>
+            <button @onclick="e => RunIsabelleProof()">Run Isabelle proof on server</button>
+        </vertic>
+        <vertic>
             <button @onclick="(e => StartProofImport())">Import proof</button>
             <button @onclick="(e => ExportProof())">Export proof</button>
         </vertic>
 
-        @("Isabelle proof result run on server: \n" + isabelleProofResult)
+        @isabelleProofResult
 
         @* Display error messages *@
         <BlazoredToasts Position="ToastPosition.TopRight"
@@ -361,6 +363,8 @@ else
         var c = new Isabelle.ProofAST.Connector(Isabelle.Compiler.compileProof(_resolutionFlow.proof));
 
         var isabelleProof = Isabelle.Generator2.writeProof(c.x);
+
+        isabelleProofResult = "Executing proof on server...";
 
         var thread = new Thread(() => {
             isabelleProofResult = this.Executor.Execute(isabelleProof);
